@@ -12,23 +12,34 @@ function Client(pageCallback) {
     this.currentRoomId = "";
     this.serverConn;
     this.pageCallback = pageCallback;
-    this.topic = "";   
+    this.topic = "";
+
+    this.onopen = function(evt) {
+        console.log("WebSocket open");
+        this.pageCallback("connectedToServer");
+    }
+
+    this.onerror = function(rawMsg) {
+        console.log("communication error");
+    }
+    this.onclose = function(evt) {
+        console.log("connection closed");
+        this.pageCallback("serverConnectionClosed");
+    }
+
 };
 
 Client.prototype.connect = function(addr){
     this.serverConn = new WebSocket(addr);
-    var that = this;
-    this.serverConn.onmessage = function(rawMsg) {
-                                    that.onMessageHandler.call(that, rawMsg);
-                                }
-    this.serverConn.onclose = function(evt) {
-        console.log("socket closed");
-    }
-    //this.serverConn.onopen = this.OnOpenHandler; //wrap syntax: function(){start(Initiator)};  
+    this.serverConn.onopen = $.proxy(this.onopen,this);
+    this.serverConn.onmessage = $.proxy(this.onmessage,this);
+    this.serverConn.onerror = $.proxy(this.onerror,this);
+    this.serverConn.onclose = $.proxy(this.onclose,this);
+    this.serverConn.pageCallback = this.pageCallback;
 }
 
 //MANIPULATORS
-Client.prototype.onMessageHandler = function(rawMsg){
+Client.prototype.onmessage = function(rawMsg){
     var msg = new Message(JSON.parse(rawMsg.data));
     var eventName = msg.getEventName();
     console.log("GOT EVENT: " + eventName);
@@ -61,7 +72,6 @@ Client.prototype.onMessageHandler = function(rawMsg){
             break;
         
         case "roomCreated":
-            this.currentRoomId = msg.getRoomId();
             this.pageCallback(eventName);
             break;
         

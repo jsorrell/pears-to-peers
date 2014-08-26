@@ -1,21 +1,19 @@
-//var Client = require('./client');
-
 var client = new Client(gamePageCb);
-window.onload = main();
 
-function main() {
-    /////test
-    client.connect("ws://localhost:8080/");
-    // client.connect("ws://192.168.2.9:8080/");
+$(document).ready(function() {
+    displayMessage("Connecting to Server", "connection-info");
+    displayMessage("Please wait for Connection", "room-info", "bad");
 
-}
+    $("#start-game-button,#topic-submission,#content-submission,#available-submissions,#select-winner").hide();
+
+    client.connect("ws://localhost:8080");
+});
 
 function gamePageCb(eventName) {
     switch (eventName) {
         case "winnerChosen":
-            var winnerList = document.getElementById("winner-list")
-            winnerList.style.visibility="visible";
-            document.getElementById("winner-button").style.visibility="visible";
+            $("#winner-list").show();
+            $("#winner-button").show();
             for (var player in client.peers) {
                 var el = document.createElement("option");
                 el.textContent = client.peers[player];
@@ -32,14 +30,12 @@ function gamePageCb(eventName) {
             break;
             
         case "roomCreated":
-            document.getElementById("start-game-button").style.visibility="hidden";
             break;
     
         case "joinedRoom":
-            currentRoomDisplay = document.getElementById("current-room-display");
-            currentRoomDisplay.innerHTML = "In room \"" + client.currentRoomId +"\"";
-            currentRoomDisplay.style.color = "green";
-            document.getElementById("start-game-button").style.visibility="visible";
+            displayMessage("You have joined room " + client.currentRoomId, "room-info", "good");
+            console.log(client);
+            $("#start-game-button").show();
             break;
             
         case "submission":
@@ -55,22 +51,37 @@ function gamePageCb(eventName) {
             break;
             
         case "noWinnerChosen":
-            document.getElementById("winner-list").style.visibility="hidden";
-            document.getElementById("winner-button").style.visibility="hidden";
+            $("#winner-list").hide();
+            $("#winner-button").hide();
             break;
 
         case "startGame":
-            document.getElementById("room-selection").style.visibility="hidden";
-            document.getElementById("room-creation").style.visibility="hidden";
-            document.getElementById("start-game-button").style.visibility="hidden";
+            displayMessage("The game has started", "room-info", "good");
+            $("#room-selection").hide();
+            $("#room-creation").hide();
+            $("#start-game-button").hide();
             break;
 
         case "leaderChosen":
-            document.getElementById("topic-submission").style.visibility="visible";
+            $("#topic-submission").show();
             break;
         case "topic":
-            document.getElementById("topic-submission").style.visibility="hidden";
-            document.getElementById("answer-submission").style.visibility="visible";
+            displayMessage("The topic is " + client.topic, "room-info");
+            $("#topic-submission").hide();
+            $("#content-submission").show();  
+            break;
+        case "connectedToServer":
+            displayMessage("Successfully connected to server.", "connection-info", "good");
+            if (client.rooms.length == 0) {
+                displayMessage("Please create a room", "room-info");
+            } else {
+                displayMessage("Choose a room", "room-info", "good");
+            }
+            break;
+        case "serverConnectionClosed":
+            displayMessage("Connection to server closed", "connection-info", "bad");
+            displayMessage("Please refresh page", "room-info", "bad");
+            break;
 
     }
 
@@ -103,13 +114,14 @@ function startGameOnClick(){
 }
 
 function submitTopicOnClick(){
-    var topic = document.getElementById("topic-submission").value;
+    var topic = document.getElementById("topic-submission-input").value;
+    console.log("sending topic " + topic);
     client.sendTopic(topic);
 }
     
 function submitContentOnClick(){
     var request = new Message();
-    var submission = document.getElementById("content-submission").value;
+    var submission = document.getElementById("content-submission-input").value;
     client.sendEntry(submission);
 }
 
@@ -117,8 +129,18 @@ function sendWinnerOnClick(){
     var winnerMsg = new Message();
     var winner = document.getElementById("winner-list").value;
     client.sendWinner(winner);
-    document.getElementById("winner-list").style.visibility="hidden";
-    document.getElementById("winner-button").style.visibility="hidden";
+    $("#winner-button").hide();
+    $("#winner-list").hide();
+}
+
+//status is good, neutral, or bad
+function displayMessage(message,id,status){
+    $("#" + id).text(message);
+    var color;
+    if (status === "good") color = "lightgreen";
+    else if (status === "bad") color = "lightcoral";
+    else color = "lightblue";
+    $("#" + id).css("background-color",color);
 }
 
 // function viewSubmissionOnClick(){

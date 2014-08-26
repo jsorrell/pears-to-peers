@@ -281,10 +281,10 @@ GameManager.gameStates = {
 };
 
 GameManager.timeouts = {
-    ELECT_LEADER : 1,
-    CHOOSE_TOPIC : 10,
+    ELECT_LEADER : 0,
+    CHOOSE_TOPIC : 20,
     SUBMISSION_PERIOD : 20,
-    CHOOSE_WINNER : 10,
+    CHOOSE_WINNER : 20,
     INTERMISSION : 5,        
 };
    
@@ -356,6 +356,7 @@ GameManager.prototype.chooseTopicTimeout = function(){
     var notification = new Message.Message();
     notification.setMessageType("GameMessage");
     notification.setEventName("topic");
+    console.log("Topic is " + this.currentTopic);
     notification.setTopic(this.currentTopic);
     notification = JSON.stringify(notification);
     for(player in this.playerInfo){
@@ -421,14 +422,18 @@ function attachGameManagerEvents(gameManager){
                  function(data, socket){
                   
       if (socket.id != this.leaderId) {
+          console.log("non-leader tried to choose topic");
           return;
       }
       
       if (this.gameState != GameManager.gameStates.CHOOSE_TOPIC) {
+          console.log("not time to choose topic");
           return;
       }
 
       this.currentTopic = data.getTopic();
+      console.log("current topic set to " + this.currentTopic);
+
   });
   
   //SUBMISSION PERIOD
