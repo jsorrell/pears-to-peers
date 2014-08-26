@@ -31,27 +31,27 @@ Client.prototype.onMessageHandler = function(rawMsg){
     console.log("GOT EVENT: " + eventName);
     console.log(msg);
     switch(eventName) {
-        case "No Winner Chosen In Time":
+        case "noWinnerChosen":
             this.pageCallback(eventName);
             this.submissions = [];
             break;
             
-        case "Choose Winner":
+        case "chooseWinner":
             this.pageCallback(eventName);
             this.submissions = [];
             break;
             
-        case "Your Id":
+        case "givenId":
             this.myID = msg.getYourId();
             this.pageCallback(eventName);
             break;
             
-        case "PeerList":
+        case "peerList":
             this.peers = msg.peerList;
             this.pageCallback(eventName);
             break;
         
-        case "RoomList":
+        case "roomList":
             this.rooms = msg.getRoomList();
             this.pageCallback(eventName);
             break;
@@ -82,7 +82,7 @@ Client.prototype.onMessageHandler = function(rawMsg){
             this.pageCallback(eventName);
             break;
          
-        case "LeaderChosen":
+        case "leaderChosen":
             if (msg.getLeader() === this.myID) {
                 console.log("PLEASE PICK TOPIC");
             }
@@ -104,7 +104,7 @@ Client.prototype.setRooms = function(rooms){
 Client.prototype.createRoom = function(roomId){
     request = new Message();
     request.setMessageType("ServerMessage");
-    request.setEventName("create_room");
+    request.setEventName("createRoom");
     request.setRoomId(roomId);
     this.serverConn.send(JSON.stringify(request));
 }
@@ -112,7 +112,7 @@ Client.prototype.createRoom = function(roomId){
 Client.prototype.joinRoom = function(roomId){
     request = new Message();
     request.setMessageType("RoomMessage");
-    request.setEventName("join_room");
+    request.setEventName("joinRoom");
     request.setRoomId(roomId);
     this.serverConn.send(JSON.stringify(request));
 }
@@ -120,7 +120,7 @@ Client.prototype.joinRoom = function(roomId){
 Client.prototype.startGame = function(){
     var request = new Message();
     request.setMessageType("RoomMessage");
-    request.setEventName("start_game");
+    request.setEventName("startGame");
     console.log("CURRENT ROOM ID: " + this.currentRoomId);      
     request.setRoomId(this.currentRoomId);
     this.serverConn.send(JSON.stringify(request));
@@ -129,7 +129,7 @@ Client.prototype.startGame = function(){
 Client.prototype.sendTopic = function(topic) {
     var request = new Message();
     request.setMessageType("GameMessage");
-    request.setEventName("choose_topic");
+    request.setEventName("topicChosen");
     request.setTopic(topic);
     request.setRoomId(client.getCurrentRoomId());
     this.serverConn.send(JSON.stringify(request));
@@ -147,7 +147,7 @@ Client.prototype.sendEntry = function(entry) {
 Client.prototype.sendWinner = function(winner) {
     var request = new Message();
     request.setMessageType("GameMessage");
-    request.setEventName("choose_winner");
+    request.setEventName("winnerChosen");
     request.setWinner(winner);
     request.setRoomId(client.getCurrentRoomId());
     this.serverConn.send(JSON.stringify(request));

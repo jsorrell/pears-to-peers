@@ -12,7 +12,7 @@ function main() {
 
 function gamePageCb(eventName) {
     switch (eventName) {
-        case "Choose Winner":
+        case "winnerChosen":
             var winnerList = document.getElementById("winnerList")
             winnerList.style.display="block";
             document.getElementById("winnerButton").style.display="block";
@@ -24,11 +24,11 @@ function gamePageCb(eventName) {
             }
             
             break;
-        case "RoomList":
+        case "roomList":
             fillRoomList();
             break;
             
-        case "PeerList":
+        case "peerList":
             break;
             
         case "roomCreated":
@@ -51,7 +51,7 @@ function gamePageCb(eventName) {
             
             break;
             
-        case "No Winner Chosen In Time":
+        case "noWinnerChosen":
             document.getElementById("winnerList").style.display="none";
             document.getElementById("winnerButton").style.display="none";
             break;
