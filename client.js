@@ -11,16 +11,19 @@ function Client(pageCallback) {
     this.myID = ""; 
     this.currentRoomId = "";
     this.serverConn;
-    this.pageCallback = pageCallback;   
+    this.pageCallback = pageCallback;
+    this.topic = "";   
 };
 
 Client.prototype.connect = function(addr){
     this.serverConn = new WebSocket(addr);
-    console.log("MY ID IS " + this.myID);
     var that = this;
     this.serverConn.onmessage = function(rawMsg) {
                                     that.onMessageHandler.call(that, rawMsg);
                                 }
+    this.serverConn.onclose = function(evt) {
+        console.log("socket closed");
+    }
     //this.serverConn.onopen = this.OnOpenHandler; //wrap syntax: function(){start(Initiator)};  
 }
 
@@ -44,6 +47,7 @@ Client.prototype.onMessageHandler = function(rawMsg){
         case "givenId":
             this.myID = msg.getYourId();
             this.pageCallback(eventName);
+            console.log("My ID is " + this.myID);
             break;
             
         case "peerList":
@@ -89,6 +93,11 @@ Client.prototype.onMessageHandler = function(rawMsg){
             
             this.pageCallback(eventName);
             break;
+        case "topic":
+            this.topic = msg.getTopic();
+            console.log("the topic is " + this.topic);
+            this.pageCallback(eventName);
+            break;
         
     }
 }
@@ -115,6 +124,7 @@ Client.prototype.joinRoom = function(roomId){
     request.setEventName("joinRoom");
     request.setRoomId(roomId);
     this.serverConn.send(JSON.stringify(request));
+    console.log("joined room request sent");
 }
 
 Client.prototype.startGame = function(){

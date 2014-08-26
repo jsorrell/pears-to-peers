@@ -335,7 +335,7 @@ GameManager.prototype.chooseLeaderTimeout = function(){
     
     var notification = new Message.Message();
     
-    notification.setEventName("LeaderChosen");
+    notification.setEventName("leaderChosen");
     notification.setMessageType("GameMessage");
     notification.setLeader(leader);
     this.leaderId = leader;
@@ -355,7 +355,8 @@ GameManager.prototype.chooseTopicTimeout = function(){
     console.log("CHOOSE TOPIC OVER");
     var notification = new Message.Message();
     notification.setMessageType("GameMessage");
-    notification.setEventName("The Topic is " + this.currentTopic);
+    notification.setEventName("topic");
+    notification.setTopic(this.currentTopic);
     notification = JSON.stringify(notification);
     for(player in this.playerInfo){
         this.playerInfo[player].getSocket().send(notification);
@@ -565,9 +566,11 @@ function attachServerManagerEvents(serverManager) {
   var websocket = serverManager.websocket;
   
   websocket.on('connection', function(socket) { //a connection opened so register callbacks for the socket
+    console.log('connect');
     iolog('connect');
 
     socket.id = id();
+    console.log('new socket got id: ' + socket.id);
     iolog('new socket got id: ' + socket.id);
     
     //send id to person
@@ -596,8 +599,8 @@ function attachServerManagerEvents(serverManager) {
     });
 
     socket.on('close', function() {
-      console.log('close');
-      iolog('close');
+      console.log('closed socket');
+      iolog('closed socket');
 
       // find socket to remove
       var i = serverManager.sockets.indexOf(socket);
@@ -652,6 +655,13 @@ function attachServerManagerEvents(serverManager) {
     response.setRoomId(roomId);
     
     socket.send(JSON.stringify(response));
+
+    /* send join confirmation */
+    var joinConfirm = new Message.Message;
+    joinConfirm.setMessageType("RoomMessage");
+    joinConfirm.setEventName("joinedRoom");
+    joinConfirm.setRoomId(roomId);
+    socket.send(JSON.stringify(joinConfirm));
     
     //tell everyone about the new room
     var response = new Message.Message();
@@ -690,6 +700,7 @@ function S4() {
 
 // make a REALLY COMPLICATED AND RANDOM id, kudos to dennis
 function id() {
+  console.log("making id");
   return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
 }
 
