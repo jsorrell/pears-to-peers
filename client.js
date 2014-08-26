@@ -68,7 +68,9 @@ Client.prototype.onmessage = function(rawMsg){
             break;
         
         case "roomList":
-            this.rooms = msg.getRoomList();
+            this.setRooms(msg.getRoomList());
+            console.log("rooms set to: ");
+            console.log(this.getRooms());
             this.pageCallback(eventName);
             break;
         

@@ -20,6 +20,11 @@ function gamePageCb(eventName) {
             
             break;
         case "roomList":
+            if (client.rooms.length === 0) {
+                displayMessage("Please create a room", "room-info");
+            } else {
+                displayMessage("Choose a room", "room-info", "good");
+            }
             fillRoomList();
             break;
             
@@ -70,11 +75,8 @@ function gamePageCb(eventName) {
             break;
         case "connectedToServer":
             displayMessage("Connected to server", "connection-info", "good");
-            if (client.rooms.length == 0) {
-                displayMessage("Please create a room", "room-info");
-            } else {
-                displayMessage("Choose a room", "room-info", "good");
-            }
+            console.log(client.rooms);
+            displayMessage("Please create a room", "room-info");
             viewState("join-room");
             break;
         case "serverConnectionClosed":

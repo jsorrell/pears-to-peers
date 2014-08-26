@@ -305,7 +305,6 @@ GameManager.prototype.run = function() {
     }
     
     if (this.gameState == gameStates.SUBMISSION_PERIOD){
-        
         this.timeout = setTimeout(function(){that.submissionTimeout();}, GameManager.timeouts.SUBMISSION_PERIOD*1000);
         return;
     }
@@ -353,17 +352,21 @@ GameManager.prototype.chooseLeaderTimeout = function(){
 GameManager.prototype.chooseTopicTimeout = function(){
     this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
     console.log("CHOOSE TOPIC OVER");
-    var notification = new Message.Message();
-    notification.setMessageType("GameMessage");
-    notification.setEventName("topic");
-    console.log("Topic is " + this.currentTopic);
-    notification.setTopic(this.currentTopic);
-    notification = JSON.stringify(notification);
-    for(player in this.playerInfo){
-        this.playerInfo[player].getSocket().send(notification);
-    }
-    
-    this.run();
+    this.setTopic("[No Topic]");
+}
+
+GameManager.prototype.setTopic = function(topic){
+  var notification = new Message.Message();
+  notification.setMessageType("GameMessage");
+  notification.setEventName("topic");
+  console.log("Topic is " + topic);
+  notification.setTopic(topic);
+  notification = JSON.stringify(notification);
+  for(player in this.playerInfo){
+      this.playerInfo[player].getSocket().send(notification);
+  }
+  
+  this.run();
 }
 
 GameManager.prototype.submissionTimeout = function(){
@@ -431,9 +434,9 @@ function attachGameManagerEvents(gameManager){
           return;
       }
 
-      this.currentTopic = data.getTopic();
-      console.log("current topic set to " + this.currentTopic);
-
+      this.setTopic(data.getTopic());
+      console.log(this);
+      clearTimeout(this.topic);
   });
   
   //SUBMISSION PERIOD
@@ -469,7 +472,7 @@ function attachGameManagerEvents(gameManager){
         }
         
         this.gameState = GameManager.gameStates.INTERMISSION;
-        this.timeout.clearTimeout();
+        clearTimeout(this.timeout);
         var submission = new Message.Message;
         submission.setEventType("GameMessage");
         submission.setEventName("winnerChosen");
