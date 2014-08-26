@@ -14,33 +14,33 @@
     <h1>Pears to Peers</h1>
     <p class="message-box" id="room-info"></p>
 
-    <div id="room-selection">
+    <div class="join-room in-room" id="room-selection">
         <h4>Available Rooms:</h4>
         <select id="room-list"></select>
         <button onclick="joinRoomOnClick()">Join Room </button>
     </div>
     
-    <form id="room-creation" style="display: inline;">
+    <form class="join-room in-room" id="room-creation" style="display: inline;">
         <h4>Create a Room:</h4>
         <input type="text" id="room-name">
         <button id="create-room-button" type="button" onclick="createRoomOnClick()">Create Room</button>
     </form>
     
-    <button id="start-game-button" type="button" onclick="startGameOnClick();">Start Game</button>
+    <button class="in-room" id="start-game-button" style="display: block"; type="button" onclick="startGameOnClick();">Start Game</button>
     
-    <form id="topic-submission">
+    <form class="submitting-topic" id="topic-submission">
         <h4>Input your Topic:</h4>
         <input id="topic-submission-input" type="text">
         <button id="topic-button" type="button" onclick="submitTopicOnClick()">Submit</button>
     </form>
     
-    <form id="content-submission">
+    <form class="submitting-content" id="content-submission">
         <h4>Enter your Submission:</h4>
         <input type="text" id="content-submission-input">
         <button id="submission-button" type="button" onclick="submitContentOnClick()">Submit</button>
     </form>
 
-    <div id="available-submissions">
+    <div class="view-submissions" id="available-submissions">
         <h4>View Others' Submissions:</h4>
         <select id="submission-list"></select>
         <button id="view-submission" type="button" onclick="viewSubmissionOnClick()">View</button>

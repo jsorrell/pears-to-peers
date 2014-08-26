@@ -3,8 +3,7 @@ var client = new Client(gamePageCb);
 $(document).ready(function() {
     displayMessage("Connecting to Server", "connection-info");
     displayMessage("Please wait for Connection", "room-info", "bad");
-
-    $("#start-game-button,#topic-submission,#content-submission,#available-submissions,#select-winner").hide();
+    viewState("disconnected");
 
     client.connect("ws://localhost:8080");
 });
@@ -12,8 +11,6 @@ $(document).ready(function() {
 function gamePageCb(eventName) {
     switch (eventName) {
         case "winnerChosen":
-            $("#winner-list").show();
-            $("#winner-button").show();
             for (var player in client.peers) {
                 var el = document.createElement("option");
                 el.textContent = client.peers[player];
@@ -34,8 +31,7 @@ function gamePageCb(eventName) {
     
         case "joinedRoom":
             displayMessage("You have joined room " + client.currentRoomId, "room-info", "good");
-            console.log(client);
-            $("#start-game-button").show();
+            viewState("in-room");
             break;
             
         case "submission":
@@ -51,36 +47,40 @@ function gamePageCb(eventName) {
             break;
             
         case "noWinnerChosen":
-            $("#winner-list").hide();
-            $("#winner-button").hide();
             break;
 
         case "startGame":
             displayMessage("The game has started", "room-info", "good");
-            $("#room-selection").hide();
-            $("#room-creation").hide();
-            $("#start-game-button").hide();
+            setTimeout(function(){
+                if (client.isLeader) {
+                    viewState("submitting-topic");
+                    displayMessage("Submit a topic", "room-info", "bad")
+                } else {
+                    viewState("waiting");
+                    displayMessage("Please wait for topic to be submitted by leader", "room-info")
+                }
+            }, 1500);
             break;
 
         case "leaderChosen":
-            $("#topic-submission").show();
             break;
         case "topic":
             displayMessage("The topic is " + client.topic, "room-info");
-            $("#topic-submission").hide();
-            $("#content-submission").show();  
+            viewState("submitting-content");
             break;
         case "connectedToServer":
-            displayMessage("Successfully connected to server.", "connection-info", "good");
+            displayMessage("Connected to server", "connection-info", "good");
             if (client.rooms.length == 0) {
                 displayMessage("Please create a room", "room-info");
             } else {
                 displayMessage("Choose a room", "room-info", "good");
             }
+            viewState("join-room");
             break;
         case "serverConnectionClosed":
             displayMessage("Connection to server closed", "connection-info", "bad");
             displayMessage("Please refresh page", "room-info", "bad");
+            viewState("disconnected");
             break;
 
     }
@@ -129,8 +129,6 @@ function sendWinnerOnClick(){
     var winnerMsg = new Message();
     var winner = document.getElementById("winner-list").value;
     client.sendWinner(winner);
-    $("#winner-button").hide();
-    $("#winner-list").hide();
 }
 
 //status is good, neutral, or bad
@@ -141,6 +139,14 @@ function displayMessage(message,id,status){
     else if (status === "bad") color = "lightcoral";
     else color = "lightblue";
     $("#" + id).css("background-color",color);
+}
+
+/* show the parts of the page for the gamestate */
+function viewState(state){
+    console.log("viewing " + state);
+    $(".message-box").show();
+    $("." + state).show();
+    $("body > :not(.message-box, ."+state+")").hide();
 }
 
 // function viewSubmissionOnClick(){

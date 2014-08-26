@@ -13,6 +13,7 @@ function Client(pageCallback) {
     this.serverConn;
     this.pageCallback = pageCallback;
     this.topic = "";
+    this.isLeader = false;
 
     this.onopen = function(evt) {
         console.log("WebSocket open");
@@ -99,10 +100,11 @@ Client.prototype.onmessage = function(rawMsg){
         case "leaderChosen":
             if (msg.getLeader() === this.myID) {
                 console.log("PLEASE PICK TOPIC");
+                this.isLeader = true;
             }
-            
             this.pageCallback(eventName);
             break;
+
         case "topic":
             this.topic = msg.getTopic();
             console.log("the topic is " + this.topic);
