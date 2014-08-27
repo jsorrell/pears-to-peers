@@ -379,6 +379,7 @@ GameManager.prototype.chooseTopicTimeout = function(){
     this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
     console.log("CHOOSE TOPIC OVER");
     this.setTopic("[No Topic]");
+    this.run();
 }
 
 GameManager.prototype.setTopic = function(topic){
@@ -459,8 +460,10 @@ function attachGameManagerEvents(gameManager){
       }
 
       this.setTopic(data.getTopic());
-      console.log(this);
-      clearTimeout(this.topic);
+      console.log(this.timeout);
+      clearTimeout(this.timeout);
+      this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;  
+      this.run();
   });
   
   //SUBMISSION PERIOD
