@@ -70,7 +70,6 @@ function RoomManager(roomId) {
     this.gameStarted      = false;  
     this.leaderId         = "";
     this.leaderIndex      = 0;
-    this.leaderCandidates = []; 
     this.timeout          = {};
     this.gameManager      = {};
     
@@ -99,31 +98,42 @@ function RoomManager(roomId) {
     }
     
     this.deletePlayer = function(playerId){
-        var exist = playerId in room.playerInfo;
+        var exist = playerId in this.playerInfo;
         
-        if (exist) {
-            var player = playerInfo[playerId];
-              if(player.started){
-                  this.numStarted -= 1;
-              }
-              
-              delete this.playerInfo[playerId];
-              this.numPlayers -= 1;
-              
-              //tell everyone this player has been deleted
-              for (var peer in room) {
-                var soc = this.getSocket(peer);
-                soc.send(JSON.stringify({
-                  "eventName": "remove_peer_connected",
-                  "data": {
-                    "socketId": playerId
-                  }
-                }), function(error) {
-                  if (error) {
-                    console.log(error);
-                  }
-                });
-              }
+        if (!exist) {
+            return;
+        }
+       
+        var player = this.playerInfo[playerId];
+          
+        for (var i=0; i<this.playerIds.length; i++) {
+            if (this.playerIds[i] === playerId) {
+                this.playerIds.splice(i, 1);
+                break;
+            }
+        }
+        
+        delete this.playerInfo[playerId];
+        this.numPlayers -= 1;
+         
+        if(this.gameStarted) {
+           this.gameManager.deletePlayer(playerId);
+        }
+          
+        else if(player.started) {
+            this.numStarted -= 1;
+        }
+          
+        var playerIds = this.playerIds;
+        var response = new Message.Message;
+        //send everyone in the room the updated playerlist
+        for(var id in playerIds) {
+           // send new peer a list of all peers
+           response.setMessageType("RoomMessage");
+           response.setEventName("peerList");
+           response.setPeerList(playerIds);
+           var clientConn = this.getSocket(playerIds[id]);
+           clientConn.send(JSON.stringify(response));
         }
    }
 
@@ -177,18 +187,16 @@ function attachRoomManagerEvents(roomManager) {
     
     var room = serverManager.roomInfo[roomId];
     var playerIds = this.playerIds;
-    var connectionsId = [];
     
     for(var id in playerIds) {
         console.log("Player %s is in the room", playerIds[id]);
-        connectionsId.push(playerIds[id]);
     }
     
     for(var id in playerIds){
         // send new peer a list of all peers
         response.setMessageType("RoomMessage");
         response.setEventName("peerList");
-        response.setPeerList(connectionsId);
+        response.setPeerList(playerIds);
         var clientConn = room.getSocket(playerIds[id]);
         clientConn.send(JSON.stringify(response));
     }
@@ -251,6 +259,8 @@ function GameManager(playerInfo, playerIds){
     this.playerInfo       = playerInfo; //Map of player objects by ID
     this.playerIds        = playerIds;
     this.leaderIndex      = 0;
+    this.leaderId         = "";
+    this.numPlayers       = playerIds.length;
     this.scores           = {};
     for (player in playerIds) {
         this.scores[playerIds[player]] = 0;
@@ -287,7 +297,21 @@ GameManager.timeouts = {
     CHOOSE_WINNER : 10,
     INTERMISSION : 5,        
 };
-   
+
+GameManager.prototype.deletePlayer = function(playerId) {
+    delete this.playerIds[playerId];
+    delete this.playerInfo[playerId];
+    delete this.scores[playerId];
+    this.numPlayers -= 1;
+    if (this.leaderId === playerId) {
+        //stop this round and restart
+        this.timeout.clearTimeout();
+        this.gameState = ELECT_LEADER;   
+        this.run();  
+    }           
+}
+
+    
 GameManager.prototype.run = function() {
     var gameStates = GameManager.gameStates;
     var that = this;
@@ -324,7 +348,9 @@ GameManager.prototype.run = function() {
 GameManager.prototype.chooseLeaderTimeout = function(){
     console.log("CHOOSE LEADER");
     var randomIndex;
+    this.leaderIndex = (this.leaderIndex+1)%(this.numPlayers);
     var leader = this.playerIds[this.leaderIndex];
+    this.leaderId = leader;
     /*if(this.leaderCandidates.length == 0){
        randomIndex = getRandomInt(0, this.numPlayers);
        randomPlayer = this.playerIds[randomIndex];
@@ -338,7 +364,6 @@ GameManager.prototype.chooseLeaderTimeout = function(){
     notification.setEventName("LeaderChosen");
     notification.setMessageType("GameMessage");
     notification.setLeader(leader);
-    this.leaderId = leader;
     this.gameState = GameManager.gameStates.CHOOSE_TOPIC;
     notification = JSON.stringify(notification);
     
@@ -372,7 +397,6 @@ GameManager.prototype.submissionTimeout = function(){
     notification.setMessageType("GameMessage");
     notification.setEventName("chooseWinner");
     notification = JSON.stringify(notification);
-    console.log(this.leaderId);
     this.playerInfo[this.leaderId].getSocket().send(notification);
     this.run();
 }
@@ -389,7 +413,6 @@ GameManager.prototype.winnerTimeout = function(){
         this.playerInfo[player].getSocket().send(notification);
     }
 
-    this.leaderIndex = (this.leaderIndex+1)%(this.playerIds.length);
     this.run();
 }
 
@@ -462,6 +485,16 @@ function attachGameManagerEvents(gameManager){
             return;
         }
         
+        if (!data.winner in this.scores) {
+            notification.setMessageType("GameMessage");
+            notification.setEventName("chooseWinner");
+            notification = JSON.stringify(notification);
+            this.playerInfo[this.leaderId].getSocket().send(notification);
+            this.timeout.clearTimeout();
+            this.run();
+            return;
+        }
+        
         this.gameState = GameManager.gameStates.INTERMISSION;
         this.timeout.clearTimeout();
         var submission = new Message.Message;
@@ -474,8 +507,7 @@ function attachGameManagerEvents(gameManager){
             var soc = this.playerInfo[player].getSocket();
             soc.send(submission);
         } 
-        
-        this.leaderIndex = (this.leaderIndex+1)%(this.playerIds.length);
+     
         this.run();         
     });
 }
@@ -606,7 +638,7 @@ function attachServerManagerEvents(serverManager) {
 
       // remove from rooms and send remove_peer_connected to all sockets in room
       var room;
-      for (var i=0; i<serverManager.roomInfo.length; i++) { //TODO: this doesn't need a loop
+      for (var i in serverManager.roomInfo) { //TODO: this doesn't need a loop
           room = serverManager.roomInfo[i];
           room.deletePlayer(socket.id);
           break;
