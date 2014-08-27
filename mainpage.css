@@ -1,0 +1,15 @@
+body{
+	font-family: sans-serif;
+}
+
+h4{
+	display: inline;
+}
+
+.message-box{
+	border: 2px solid;
+  border-radius: 25px;
+  width: 400px;
+  text-align: center;
+  padding: 10px;
+}

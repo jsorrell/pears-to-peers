@@ -292,10 +292,10 @@ GameManager.gameStates = {
 };
 
 GameManager.timeouts = {
-    ELECT_LEADER : 1,
-    CHOOSE_TOPIC : 10,
+    ELECT_LEADER : 0,
+    CHOOSE_TOPIC : 20,
     SUBMISSION_PERIOD : 20,
-    CHOOSE_WINNER : 10,
+    CHOOSE_WINNER : 20,
     INTERMISSION : 5,        
 };
 
@@ -330,7 +330,6 @@ GameManager.prototype.run = function() {
     }
     
     if (this.gameState == gameStates.SUBMISSION_PERIOD){
-        
         this.timeout = setTimeout(function(){that.submissionTimeout();}, GameManager.timeouts.SUBMISSION_PERIOD*1000);
         return;
     }
@@ -362,7 +361,7 @@ GameManager.prototype.chooseLeaderTimeout = function(){
     
     var notification = new Message.Message();
     
-    notification.setEventName("LeaderChosen");
+    notification.setEventName("leaderChosen");
     notification.setMessageType("GameMessage");
     notification.setLeader(leader);
     this.gameState = GameManager.gameStates.CHOOSE_TOPIC;
@@ -379,15 +378,21 @@ GameManager.prototype.chooseLeaderTimeout = function(){
 GameManager.prototype.chooseTopicTimeout = function(){
     this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
     console.log("CHOOSE TOPIC OVER");
-    var notification = new Message.Message();
-    notification.setMessageType("GameMessage");
-    notification.setEventName("The Topic is " + this.currentTopic);
-    notification = JSON.stringify(notification);
-    for(player in this.playerInfo){
-        this.playerInfo[player].getSocket().send(notification);
-    }
-    
-    this.run();
+    this.setTopic("[No Topic]");
+}
+
+GameManager.prototype.setTopic = function(topic){
+  var notification = new Message.Message();
+  notification.setMessageType("GameMessage");
+  notification.setEventName("topic");
+  console.log("Topic is " + topic);
+  notification.setTopic(topic);
+  notification = JSON.stringify(notification);
+  for(player in this.playerInfo){
+      this.playerInfo[player].getSocket().send(notification);
+  }
+  
+  this.run();
 }
 
 GameManager.prototype.submissionTimeout = function(){
@@ -444,14 +449,18 @@ function attachGameManagerEvents(gameManager){
                  function(data, socket){
                   
       if (socket.id != this.leaderId) {
+          console.log("non-leader tried to choose topic");
           return;
       }
       
       if (this.gameState != GameManager.gameStates.CHOOSE_TOPIC) {
+          console.log("not time to choose topic");
           return;
       }
 
-      this.currentTopic = data.getTopic();
+      this.setTopic(data.getTopic());
+      console.log(this);
+      clearTimeout(this.topic);
   });
   
   //SUBMISSION PERIOD
@@ -598,9 +607,11 @@ function attachServerManagerEvents(serverManager) {
   var websocket = serverManager.websocket;
   
   websocket.on('connection', function(socket) { //a connection opened so register callbacks for the socket
+    console.log('connect');
     iolog('connect');
 
     socket.id = id();
+    console.log('new socket got id: ' + socket.id);
     iolog('new socket got id: ' + socket.id);
     
     //send id to person
@@ -629,8 +640,8 @@ function attachServerManagerEvents(serverManager) {
     });
 
     socket.on('close', function() {
-      console.log('close');
-      iolog('close');
+      console.log('closed socket');
+      iolog('closed socket');
 
       // find socket to remove
       var i = serverManager.sockets.indexOf(socket);
@@ -685,6 +696,13 @@ function attachServerManagerEvents(serverManager) {
     response.setRoomId(roomId);
     
     socket.send(JSON.stringify(response));
+
+    /* send join confirmation */
+    var joinConfirm = new Message.Message;
+    joinConfirm.setMessageType("RoomMessage");
+    joinConfirm.setEventName("joinedRoom");
+    joinConfirm.setRoomId(roomId);
+    socket.send(JSON.stringify(joinConfirm));
     
     //tell everyone about the new room
     var response = new Message.Message();
@@ -723,6 +741,7 @@ function S4() {
 
 // make a REALLY COMPLICATED AND RANDOM id, kudos to dennis
 function id() {
+  console.log("making id");
   return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
 }
 

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="mainpage.css"/>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="message.js"></script>
+    <script src="client.js"></script>
+    <script src="gamePage.js"></script>
+    <title>Pears to Peers</title>
+  <head>
+
+<body>
+    <p class="message-box" id="connection-info"></p>
+    <h1>Pears to Peers</h1>
+    <p class="message-box" id="room-info"></p>
+
+    <div class="join-room in-room" id="room-selection">
+        <h4>Available Rooms:</h4>
+        <select id="room-list"></select>
+        <button onclick="joinRoomOnClick()">Join Room </button>
+    </div>
+    
+    <form class="join-room in-room" id="room-creation" style="display: inline;">
+        <h4>Create a Room:</h4>
+        <input type="text" id="room-name">
+        <button id="create-room-button" type="button" onclick="createRoomOnClick()">Create Room</button>
+    </form>
+    
+    <button class="in-room" id="start-game-button" style="display: block"; type="button" onclick="startGameOnClick();">Start Game</button>
+    
+    <form class="submitting-topic" id="topic-submission">
+        <h4>Input your Topic:</h4>
+        <input id="topic-submission-input" type="text">
+        <button id="topic-button" type="button" onclick="submitTopicOnClick()">Submit</button>
+    </form>
+    
+    <form class="submitting-content" id="content-submission">
+        <h4>Enter your Submission:</h4>
+        <input type="text" id="content-submission-input">
+        <button id="submission-button" type="button" onclick="submitContentOnClick()">Submit</button>
+    </form>
+
+    <div class="view-submissions" id="available-submissions">
+        <h4>View Others' Submissions:</h4>
+        <select id="submission-list"></select>
+        <button id="view-submission" type="button" onclick="viewSubmissionOnClick()">View</button>
+    </div>
+
+    <div id="select-winner">
+        <h4>Choose the Winner:</h4>
+        <select id="winner-list"></select>
+        <button id="winner-button" type="button" onclick="sendWinnerOnClick()">Submit</button>
+    </div>
+</body>
+</html>

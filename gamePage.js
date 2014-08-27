@@ -1,21 +1,16 @@
-//var Client = require('./client');
-
 var client = new Client(gamePageCb);
-window.onload = main();
 
-function main() {
-    /////test
-    client.connect("ws://localhost:8080/");
-    // client.connect("ws://192.168.1.9:8080/");
+$(document).ready(function() {
+    displayMessage("Connecting to Server", "connection-info");
+    displayMessage("Please wait for Connection", "room-info", "bad");
+    viewState("disconnected");
 
-}
+    client.connect("ws://localhost:8080");
+});
 
 function gamePageCb(eventName) {
     switch (eventName) {
         case "winnerChosen":
-            var winnerList = document.getElementById("winnerList")
-            winnerList.style.display="block";
-            document.getElementById("winnerButton").style.display="block";
             for (var player in client.peers) {
                 var el = document.createElement("option");
                 el.textContent = client.peers[player];
@@ -25,6 +20,11 @@ function gamePageCb(eventName) {
             
             break;
         case "roomList":
+            if (client.rooms.length === 0) {
+                displayMessage("Please create a room", "room-info");
+            } else {
+                displayMessage("Choose a room", "room-info", "good");
+            }
             fillRoomList();
             break;
             
@@ -32,15 +32,15 @@ function gamePageCb(eventName) {
             break;
             
         case "roomCreated":
-            document.getElementById("startGameButton").style.display="block";
             break;
     
         case "joinedRoom":
-            document.getElementById("startGameButton").style.display="block";
+            displayMessage("You have joined room " + client.currentRoomId, "room-info", "good");
+            viewState("in-room");
             break;
             
         case "submission":
-            var submissionList = document.getElementById("submissionList");
+            var submissionList = document.getElementById("submission-list");
             submissionList.options.length = 0;
             for(var i=0; i<client.submissions.length; i++) {
                 var el = document.createElement("option");
@@ -52,14 +52,44 @@ function gamePageCb(eventName) {
             break;
             
         case "noWinnerChosen":
-            document.getElementById("winnerList").style.display="none";
-            document.getElementById("winnerButton").style.display="none";
             break;
+
+        case "startGame":
+            displayMessage("The game has started", "room-info", "good");
+            setTimeout(function(){
+                if (client.isLeader) {
+                    viewState("submitting-topic");
+                    displayMessage("Submit a topic", "room-info", "bad")
+                } else {
+                    viewState("waiting");
+                    displayMessage("Please wait for topic to be submitted by leader", "room-info")
+                }
+            }, 1500);
+            break;
+
+        case "leaderChosen":
+            break;
+        case "topic":
+            displayMessage("The topic is " + client.topic, "room-info");
+            viewState("submitting-content");
+            break;
+        case "connectedToServer":
+            displayMessage("Connected to server", "connection-info", "good");
+            console.log(client.rooms);
+            displayMessage("Please create a room", "room-info");
+            viewState("join-room");
+            break;
+        case "serverConnectionClosed":
+            displayMessage("Connection to server closed", "connection-info", "bad");
+            displayMessage("Please refresh page", "room-info", "bad");
+            viewState("disconnected");
+            break;
+
     }
 
 }
 function fillRoomList(){
-    var roomList = document.getElementById("RoomList");
+    var roomList = document.getElementById("room-list");
     roomList.options.length = 0;
     var rooms = client.getRooms();
     for(var room in rooms) {
@@ -71,13 +101,13 @@ function fillRoomList(){
 }
 
 function createRoomOnClick(){
-    var roomId = document.getElementById("RoomName").value;
+    var roomId = document.getElementById("room-name").value;
     client.createRoom(roomId);
     //.value then .reset()
 }
 
 function joinRoomOnClick(){
-    var roomId = document.getElementById("RoomList").value;
+    var roomId = document.getElementById("room-list").value;
     client.joinRoom(roomId);
 }
 
@@ -86,27 +116,44 @@ function startGameOnClick(){
 }
 
 function submitTopicOnClick(){
-    var topic = document.getElementById("topicSubmission").value;
+    var topic = document.getElementById("topic-submission-input").value;
+    console.log("sending topic " + topic);
     client.sendTopic(topic);
 }
     
 function submitContentOnClick(){
     var request = new Message();
-    var submission = document.getElementById("contentSubmission").value;
+    var submission = document.getElementById("content-submission-input").value;
     client.sendEntry(submission);
 }
 
 function sendWinnerOnClick(){
     var winnerMsg = new Message();
-    var winner = document.getElementById("winnerList").value;
+    var winner = document.getElementById("winner-list").value;
     client.sendWinner(winner);
-    document.getElementById("winnerList").style.display="none";
-    document.getElementById("winnerButton").style.display="none";
 }
 
-function viewSubmissionOnClick(){
-    var selectedSubmission = document.getElementById("submissionList").value;
-    var submissionViewer = document.getElementById("submissionViewer");
-    submissionViewer.src = selectedSubmission;
-    submissionViewer.contentWindow.location.reload();
+//status is good, neutral, or bad
+function displayMessage(message,id,status){
+    $("#" + id).text(message);
+    var color;
+    if (status === "good") color = "lightgreen";
+    else if (status === "bad") color = "lightcoral";
+    else color = "lightblue";
+    $("#" + id).css("background-color",color);
 }
+
+/* show the parts of the page for the gamestate */
+function viewState(state){
+    console.log("viewing " + state);
+    $(".message-box").show();
+    $("." + state).show();
+    $("body > :not(.message-box, ."+state+")").hide();
+}
+
+// function viewSubmissionOnClick(){
+//     var selectedSubmission = document.getElementById("submissionList").value;
+//     var submissionViewer = document.getElementById("submissionViewer");
+//     submissionViewer.src = selectedSubmission;
+//     submissionViewer.contentWindow.location.reload();
+// }

@@ -11,21 +11,36 @@ function Client(pageCallback) {
     this.myID = ""; 
     this.currentRoomId = "";
     this.serverConn;
-    this.pageCallback = pageCallback;   
+    this.pageCallback = pageCallback;
+    this.topic = "";
+    this.isLeader = false;
+
+    this.onopen = function(evt) {
+        console.log("WebSocket open");
+        this.pageCallback("connectedToServer");
+    }
+
+    this.onerror = function(rawMsg) {
+        console.log("communication error");
+    }
+    this.onclose = function(evt) {
+        console.log("connection closed");
+        this.pageCallback("serverConnectionClosed");
+    }
+
 };
 
 Client.prototype.connect = function(addr){
     this.serverConn = new WebSocket(addr);
-    console.log("MY ID IS " + this.myID);
-    var that = this;
-    this.serverConn.onmessage = function(rawMsg) {
-                                    that.onMessageHandler.call(that, rawMsg);
-                                }
-    //this.serverConn.onopen = this.OnOpenHandler; //wrap syntax: function(){start(Initiator)};  
+    this.serverConn.onopen = $.proxy(this.onopen,this);
+    this.serverConn.onmessage = $.proxy(this.onmessage,this);
+    this.serverConn.onerror = $.proxy(this.onerror,this);
+    this.serverConn.onclose = $.proxy(this.onclose,this);
+    this.serverConn.pageCallback = this.pageCallback;
 }
 
 //MANIPULATORS
-Client.prototype.onMessageHandler = function(rawMsg){
+Client.prototype.onmessage = function(rawMsg){
     var msg = new Message(JSON.parse(rawMsg.data));
     var eventName = msg.getEventName();
     console.log("GOT EVENT: " + eventName);
@@ -44,6 +59,7 @@ Client.prototype.onMessageHandler = function(rawMsg){
         case "givenId":
             this.myID = msg.getYourId();
             this.pageCallback(eventName);
+            console.log("My ID is " + this.myID);
             break;
             
         case "peerList":
@@ -52,12 +68,13 @@ Client.prototype.onMessageHandler = function(rawMsg){
             break;
         
         case "roomList":
-            this.rooms = msg.getRoomList();
+            this.setRooms(msg.getRoomList());
+            console.log("rooms set to: ");
+            console.log(this.getRooms());
             this.pageCallback(eventName);
             break;
         
         case "roomCreated":
-            this.currentRoomId = msg.getRoomId();
             this.pageCallback(eventName);
             break;
         
@@ -85,8 +102,14 @@ Client.prototype.onMessageHandler = function(rawMsg){
         case "leaderChosen":
             if (msg.getLeader() === this.myID) {
                 console.log("PLEASE PICK TOPIC");
+                this.isLeader = true;
             }
-            
+            this.pageCallback(eventName);
+            break;
+
+        case "topic":
+            this.topic = msg.getTopic();
+            console.log("the topic is " + this.topic);
             this.pageCallback(eventName);
             break;
         
@@ -115,6 +138,7 @@ Client.prototype.joinRoom = function(roomId){
     request.setEventName("joinRoom");
     request.setRoomId(roomId);
     this.serverConn.send(JSON.stringify(request));
+    console.log("joined room request sent");
 }
 
 Client.prototype.startGame = function(){
