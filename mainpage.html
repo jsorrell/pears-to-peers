@@ -40,16 +40,12 @@
         <button id="submission-button" type="button" onclick="submitContentOnClick()">Submit</button>
     </form>
 
-    <div class="view-submissions" id="available-submissions">
+    <div class="view-submissions select-winner" id="available-submissions">
         <h4>View Others' Submissions:</h4>
         <select id="submission-list"></select>
         <button id="view-submission" type="button" onclick="viewSubmissionOnClick()">View</button>
     </div>
+    <button class="select-winner" id="winner-button" type="button" onclick="sendWinnerOnClick()">Submit</button>
 
-    <div id="select-winner">
-        <h4>Choose the Winner:</h4>
-        <select id="winner-list"></select>
-        <button id="winner-button" type="button" onclick="sendWinnerOnClick()">Submit</button>
-    </div>
 </body>
 </html>

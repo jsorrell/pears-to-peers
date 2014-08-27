@@ -20,12 +20,30 @@ function gamePageCb(eventName) {
             
             break;
         case "roomList":
-            if (client.rooms.length === 0) {
-                displayMessage("Please create a room", "room-info");
-            } else {
-                displayMessage("Choose a room", "room-info", "good");
+            if (client.currentRoomId == null) {
+                console.log(client.currentRoomId);
+                if (client.rooms.length === 0) {
+                    displayMessage("Please create a room", "room-info");
+                } else {
+                    displayMessage("Choose a room", "room-info", "good");
+                }
             }
             fillRoomList();
+            break;
+        case "chooseWinner":
+            if (client.isLeader) {
+                viewState("select-winner");
+                displayMessage("Choose the winner", "room-info", "bad");
+            } else {
+                viewState("view-submissions");
+                displayMessage("View others' submissions", "room-info");
+            }
+            console.log(client.submissions);
+            $.each(client.submissions,function(index, val) {
+                console.log("index:");
+                console.log(index);
+                $("#submission-list").append("<option value=\""+index+"\">"+val+"</option>");
+            });
             break;
             
         case "peerList":
@@ -52,26 +70,29 @@ function gamePageCb(eventName) {
             break;
             
         case "noWinnerChosen":
-            break;
-
         case "startGame":
-            displayMessage("The game has started", "room-info", "good");
-            setTimeout(function(){
-                if (client.isLeader) {
-                    viewState("submitting-topic");
-                    displayMessage("Submit a topic", "room-info", "bad")
-                } else {
-                    viewState("waiting");
-                    displayMessage("Please wait for topic to be submitted by leader", "room-info")
-                }
-            }, 1500);
+            displayMessage("The game has started. Choosing leader.", "room-info", "good");
             break;
 
         case "leaderChosen":
+            if (client.isLeader) {
+                viewState("submitting-topic");
+                displayMessage("Submit a topic", "room-info", "bad")
+            } else {
+                viewState("waiting");
+                displayMessage("Please wait for topic to be submitted by leader("+client.leaderId+")", "room-info")
+            }
             break;
+
         case "topic":
             displayMessage("The topic is " + client.topic, "room-info");
-            viewState("submitting-content");
+            if (client.isLeader) {
+                viewState("waiting");
+                displayMessage("Waiting for content to be submitted", "room-info")
+            } else {
+                viewState("submitting-content");
+                displayMessage("Please submit content!", "room-info", "good")
+            }
             break;
         case "connectedToServer":
             displayMessage("Connected to server", "connection-info", "good");
@@ -129,7 +150,9 @@ function submitContentOnClick(){
 
 function sendWinnerOnClick(){
     var winnerMsg = new Message();
-    var winner = document.getElementById("winner-list").value;
+    console.log("Winner: ");
+    console.log($("#winner-list").val());
+    var winner = parseInt($("#submission-list").val());
     client.sendWinner(winner);
 }
 

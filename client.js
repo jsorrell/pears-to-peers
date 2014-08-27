@@ -7,13 +7,14 @@
 function Client(pageCallback) {
     this.peers = [];
     this.rooms = [];
-    this.submissions = [];
+    this.submissions = {};
     this.myID = ""; 
-    this.currentRoomId = "";
+    this.currentRoomId = null;
     this.serverConn;
     this.pageCallback = pageCallback;
     this.topic = "";
     this.isLeader = false;
+    this.leaderId = "";
 
     this.onopen = function(evt) {
         console.log("WebSocket open");
@@ -48,12 +49,13 @@ Client.prototype.onmessage = function(rawMsg){
     switch(eventName) {
         case "noWinnerChosen":
             this.pageCallback(eventName);
-            this.submissions = [];
             break;
             
         case "chooseWinner":
+            this.submissions = msg.getAllSubmissions();
+            console.log("submissions: ");
+            console.log(this.submissions);
             this.pageCallback(eventName);
-            this.submissions = [];
             break;
             
         case "givenId":
@@ -100,10 +102,8 @@ Client.prototype.onmessage = function(rawMsg){
             break;
          
         case "leaderChosen":
-            if (msg.getLeader() === this.myID) {
-                console.log("PLEASE PICK TOPIC");
-                this.isLeader = true;
-            }
+            this.isLeader = (msg.getLeader() === this.myID);
+            this.leaderId = msg.getLeader();
             this.pageCallback(eventName);
             break;
 
