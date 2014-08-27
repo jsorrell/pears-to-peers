@@ -75,8 +75,8 @@ function RoomManager(roomId) {
     
 //MANIPULATORS:
     this.on = function(eventName, callback){
-              this.events[eventName] = callback;
-          };
+      this.events[eventName] = callback;
+    };
           
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
         console.log("CALLING FIRE ON " + msg.eventName);
@@ -326,6 +326,7 @@ GameManager.prototype.run = function() {
     if (this.gameState == gameStates.CHOOSE_TOPIC){
         console.log("CHOOSE_TOPIC");
         this.timeout = setTimeout(function(){that.chooseTopicTimeout();}, GameManager.timeouts.CHOOSE_TOPIC*1000);
+        console.log("Setting timeout for topic");
         return;
     }
     
@@ -391,9 +392,7 @@ GameManager.prototype.setTopic = function(topic){
   notification = JSON.stringify(notification);
   for(player in this.playerInfo){
       this.playerInfo[player].getSocket().send(notification);
-  }
-  
-  this.run();
+  }  
 }
 
 GameManager.prototype.submissionTimeout = function(){
@@ -460,9 +459,8 @@ function attachGameManagerEvents(gameManager){
       }
 
       this.setTopic(data.getTopic());
-      console.log(this.timeout);
       clearTimeout(this.timeout);
-      this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;  
+      this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
       this.run();
   });
   
