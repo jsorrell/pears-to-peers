@@ -263,6 +263,8 @@ function GameManager(playerInfo, playerIds){
     this.numPlayers       = playerIds.length;
     this.scores           = {};
     this.timeout          = {};
+    this.allSubmissions   = {};
+    this.submissionsMap   = []; 
     for (player in playerIds) {
         this.scores[playerIds[player]] = 0;
     }
@@ -307,9 +309,37 @@ GameManager.prototype.deletePlayer = function(playerId) {
     if (this.leaderId === playerId) {
         //stop this round and restart
         clearTimeout(this.timeout);
+        this.allSubmissions = {};
+        this.submissionsMap = {};
         this.gameState = GameManager.timeouts.ELECT_LEADER;   
-        this.run();  
+        this.run();
+        return;  
     }           
+    
+    delete this.allSubmissions[playerId];
+    
+    if (this.gameState == GameManager.gameStates.CHOOSE_WINNER){
+        var notification = new Message.Message();
+        notification.setMessageType("GameMessage");
+        notification.setEventName("chooseWinner");
+        var submissions = {};
+        var submissionsMap = {};
+        
+        var i = 0;
+        for (var player in this.allSubmissions){
+            submissions[i] = allSubmissions[player];
+            submissionsMap[i] = player;
+            i += 1;
+        }
+        
+        this.submissionsMap = submissionsMap;
+        notification.setAllSubmissions(submissions);
+        notification = JSON.stringify(notification);
+        
+        for(player in this.playerInfo){
+            this.playerInfo[player].getSocket().send(notification);
+        }
+    }
 }
 
     
@@ -379,6 +409,7 @@ GameManager.prototype.chooseTopicTimeout = function(){
     this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
     console.log("CHOOSE TOPIC OVER");
     this.setTopic("[No Topic]");
+    this.run();
 }
 
 GameManager.prototype.setTopic = function(topic){
@@ -391,8 +422,6 @@ GameManager.prototype.setTopic = function(topic){
   for(player in this.playerInfo){
       this.playerInfo[player].getSocket().send(notification);
   }
-  
-  this.run();
 }
 
 GameManager.prototype.submissionTimeout = function(){
@@ -402,8 +431,25 @@ GameManager.prototype.submissionTimeout = function(){
     var notification = new Message.Message();
     notification.setMessageType("GameMessage");
     notification.setEventName("chooseWinner");
+    var submissions = {};
+    var submissionsMap = {};
+    
+    var i = 0;
+    for (var player in this.allSubmissions){
+        submissions[i] = allSubmissions[player];
+        submissionsMap[i] = player;
+        i += 1;
+    }
+    
+    this.submissionsMap = submissionsMap;
+    notification.setAllSubmissions(submissions);
     notification = JSON.stringify(notification);
-    this.playerInfo[this.leaderId].getSocket().send(notification);
+    
+    for(player in this.playerInfo){
+        this.playerInfo[player].getSocket().send(notification);
+    }
+    
+    //tell other people submission period is over
     this.run();
 }
 
@@ -438,6 +484,8 @@ GameManager.prototype.sendScores = function(){
 GameManager.prototype.intermissionEnded = function(){
     console.log("INTERMISSION");
     this.gameState = GameManager.gameStates.ELECT_LEADER;
+    this.allSubmissions = {};
+    this.submissionsMap = {};
     this.sendScores();
     this.run();
 }
@@ -459,8 +507,9 @@ function attachGameManagerEvents(gameManager){
       }
 
       this.setTopic(data.getTopic());
-      console.log(this);
-      clearTimeout(this.topic);
+      clearTimeout(this.timeout);
+      this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;  
+      this.run();
   });
   
   //SUBMISSION PERIOD
@@ -472,15 +521,7 @@ function attachGameManagerEvents(gameManager){
             return;
         }
         
-        var submission = new Message.Message;
-        submission.setMessageType("GameMessage");
-        submission.setEventName("submission");
-        submission.setSubmission(data.getSubmission());
-        submission = JSON.stringify(submission);
-        for(var player in this.playerInfo){
-            var soc = this.playerInfo[player].getSocket();
-            soc.send(submission);
-        }
+        this.allSubmissions[socket.id] = data.getSubmission();
     });
     
     //CHOOSE WINNER
@@ -495,6 +536,7 @@ function attachGameManagerEvents(gameManager){
             return;
         }
         
+        var winner = this.submissionsMap[data.getWinner()];
         if (!data.winner in this.scores) {
             notification.setMessageType("GameMessage");
             notification.setEventName("chooseWinner");
