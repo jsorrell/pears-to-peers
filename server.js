@@ -4,6 +4,7 @@
 //TODO: standardize format of messages
 //TODO: GameManager should be a component passed to the RoomManager, defined in separate file
         // rename current GameManager to be ServerManager
+//TODO: clicking submit before game breaks it
 
 var consts = {
     minPlayers : 3
@@ -70,7 +71,6 @@ function RoomManager(roomId) {
     this.gameStarted      = false;  
     this.leaderId         = "";
     this.leaderIndex      = 0;
-    this.timeout          = {};
     this.gameManager      = {};
     
 //MANIPULATORS:
@@ -262,6 +262,7 @@ function GameManager(playerInfo, playerIds){
     this.leaderId         = "";
     this.numPlayers       = playerIds.length;
     this.scores           = {};
+    this.timeout          = {};
     for (player in playerIds) {
         this.scores[playerIds[player]] = 0;
     }
@@ -305,8 +306,8 @@ GameManager.prototype.deletePlayer = function(playerId) {
     this.numPlayers -= 1;
     if (this.leaderId === playerId) {
         //stop this round and restart
-        this.timeout.clearTimeout();
-        this.gameState = ELECT_LEADER;   
+        clearTimeout(this.timeout);
+        this.gameState = GameManager.timeouts.ELECT_LEADER;   
         this.run();  
     }           
 }
@@ -490,13 +491,13 @@ function attachGameManagerEvents(gameManager){
             notification.setEventName("chooseWinner");
             notification = JSON.stringify(notification);
             this.playerInfo[this.leaderId].getSocket().send(notification);
-            this.timeout.clearTimeout();
+            clearTimeout(this.timeout);
             this.run();
             return;
         }
         
         this.gameState = GameManager.gameStates.INTERMISSION;
-        this.timeout.clearTimeout();
+        clearTimeout(this.timeout);
         var submission = new Message.Message;
         submission.setEventType("GameMessage");
         submission.setEventName("winnerChosen");
