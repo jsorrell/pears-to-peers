@@ -7,7 +7,7 @@
 function Client(pageCallback) {
     this.peers = [];
     this.rooms = [];
-    this.submissions = [];
+    this.submissions = {};
     this.myID = ""; 
     this.currentRoomId = null;
     this.serverConn;
@@ -49,12 +49,13 @@ Client.prototype.onmessage = function(rawMsg){
     switch(eventName) {
         case "noWinnerChosen":
             this.pageCallback(eventName);
-            this.submissions = [];
             break;
             
         case "chooseWinner":
-            this.pageCallback(eventName);
             this.submissions = msg.getAllSubmissions();
+            console.log("submissions: ");
+            console.log(this.submissions);
+            this.pageCallback(eventName);
             break;
             
         case "givenId":

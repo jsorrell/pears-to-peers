@@ -38,8 +38,11 @@ function gamePageCb(eventName) {
                 viewState("view-submissions");
                 displayMessage("View others' submissions", "room-info");
             }
-            $(client.submissions).each(function(index, val) {
-                $("#submission-list").append("<option value="+index+">"+val+"</option>");
+            console.log(client.submissions);
+            $.each(client.submissions,function(index, val) {
+                console.log("index:");
+                console.log(index);
+                $("#submission-list").append("<option value=\""+index+"\">"+val+"</option>");
             });
             break;
             
@@ -147,7 +150,9 @@ function submitContentOnClick(){
 
 function sendWinnerOnClick(){
     var winnerMsg = new Message();
-    var winner = parseInt(document.getElementById("winner-list").value);
+    console.log("Winner: ");
+    console.log($("#winner-list").val());
+    var winner = parseInt($("#submission-list").val());
     client.sendWinner(winner);
 }
 

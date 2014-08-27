@@ -18,14 +18,19 @@ function Message(MessageCopy){
     this.yourId = "";
     this.leader = "";
     this.topic = "";
-    this.winner = "";
+    this.winner = -1;
     this.scores = {}
     this.submission = "";
+    this.allSubmissions = {};
     this.roomList = [];
     this.peerList = [];
     }
     
 //MANIPULATORS:
+    this.setAllSubmissions = function(allSubmissions){
+        this.allSubmissions = allSubmissions;
+    }
+    
     this.setEventName = function(eventName){
         this.eventName = eventName;
     }
@@ -79,6 +84,10 @@ function Message(MessageCopy){
     }
 
 //ACCESSORS
+    this.getAllSubmissions = function(){
+        return this.allSubmissions;
+    }
+    
     this.getEventName = function(){
         return this.eventName;
     }
