@@ -550,12 +550,12 @@ function attachGameManagerEvents(gameManager){
         this.gameState = GameManager.gameStates.INTERMISSION;
         clearTimeout(this.timeout);
         var submission = new Message.Message;
-        submission.setEventType("GameMessage");
+        submission.setMessageType("GameMessage");
         submission.setEventName("winnerChosen");
-        submission.setWinner(data.winner);
-        this.scores[data.winner] += 1;
+        submission.setWinner(winner);
+        this.scores[winner] += 1;
         submission = JSON.stringify(submission);
-        for(var player in room.playerInfo){
+        for(var player in this.playerInfo){
             var soc = this.playerInfo[player].getSocket();
             soc.send(submission);
         } 
