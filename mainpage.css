@@ -13,3 +13,13 @@ h4{
   text-align: center;
   padding: 10px;
 }
+
+table#score-table{
+	width: 400px;
+	border-collapse: collapse;
+	border: 1px solid black;
+}
+
+#score-table-ids{
+	font-size: 60%%;
+}

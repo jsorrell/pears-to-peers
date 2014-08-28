@@ -27,7 +27,11 @@
     </form>
     
     <button class="in-room" id="start-game-button" style="display: block"; type="button" onclick="startGameOnClick();">Start Game</button>
-    
+    <table class="in-room submitting-topic submitting-content view-submissions select-winner waiting"id="score-table">
+        <tr id="score-table-ids"> </tr>
+        <tr id="score-table-scores"> </tr>
+    </table>
+
     <form class="submitting-topic" id="topic-submission">
         <h4>Input your Topic:</h4>
         <input id="topic-submission-input" type="text">

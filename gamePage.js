@@ -11,13 +11,7 @@ $(document).ready(function() {
 function gamePageCb(eventName) {
     switch (eventName) {
         case "winnerChosen":
-            for (var player in client.peers) {
-                var el = document.createElement("option");
-                el.textContent = client.peers[player];
-                el.value = player;
-                winnerList.appendChild(el);    
-            }
-            
+            $("#submission-list").html("");
             break;
         case "roomList":
             if (client.currentRoomId == null) {
@@ -47,6 +41,13 @@ function gamePageCb(eventName) {
             break;
             
         case "peerList":
+        case "scores":
+            $("#score-table-ids").html("");
+            $("#score-table-scores").html("");
+            $.each(client.scores,function (client,score) {
+                $("#score-table-ids").append("<td>"+client+"</td>");
+                $("#score-table-scores").append("<td>"+score+"</td>");
+            });
             break;
             
         case "roomCreated":
@@ -91,7 +92,7 @@ function gamePageCb(eventName) {
                 displayMessage("Waiting for content to be submitted", "room-info")
             } else {
                 viewState("submitting-content");
-                displayMessage("Please submit content!", "room-info", "good")
+                displayMessage("Please submit content for topic \"" + client.topic + "\"!", "room-info", "good")
             }
             break;
         case "connectedToServer":

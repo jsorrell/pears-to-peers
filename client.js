@@ -5,7 +5,7 @@
 //Description: Represents a player 
 
 function Client(pageCallback) {
-    this.peers = [];
+    this.scores = {};
     this.rooms = [];
     this.submissions = {};
     this.myID = ""; 
@@ -65,7 +65,11 @@ Client.prototype.onmessage = function(rawMsg){
             break;
             
         case "peerList":
-            this.peers = msg.peerList;
+            var peerList = msg.getPeerList();
+            for (idx in peerList) {
+                if (!this.scores.hasOwnProperty(peerList[idx]))
+                    this.scores[peerList[idx]] = 0;
+            }
             this.pageCallback(eventName);
             break;
         
@@ -87,6 +91,7 @@ Client.prototype.onmessage = function(rawMsg){
         
         case "scores":
             console.log(msg.getScores());
+            this.scores = msg.getScores();
             this.pageCallback(eventName);
             break;
             
