@@ -1,11 +1,89 @@
 var client = new Client(gamePageCb);
 
+var files;
+
 $(document).ready(function() {
     displayMessage("Connecting to Server", "connection-info");
     displayMessage("Please wait for Connection", "room-info", "bad");
     viewState("disconnected");
 
     client.connect("ws://localhost:8080");
+
+    $("form").submit(function (e){
+        e.preventDefault();
+    });
+
+    $("#file-submission-input").on('change', function (event)
+    {
+      files = event.target.files;
+    });
+
+    $("#file-submit-form").on('submit', function (event)
+    {
+        event.stopPropagation(); // Stop stuff happening
+        event.preventDefault(); // Totally stop stuff happening
+     
+        // Progress bar
+        $("#file-upload-progress-bar").val(10);
+     
+        // Create a formdata object and add the files
+        var data = new FormData();
+        $.each(files, function(key, value)
+        {
+            data.append(key, value);
+        });
+        
+        $.ajax({
+            url: 'http://localhost:8081',
+            type: 'POST',
+            data: data,
+            cache: false,
+            dataType: 'json',
+            processData: false, // Don't process the files
+            contentType: false, // Set content type to false as jQuery will tell the server its a query string request
+            success: function(data, textStatus, jqXHR)
+            {
+                if(typeof data.error === 'undefined')
+                {
+                    // Success so call function to process the form
+                    submitForm(event, data);
+                }
+                else
+                {
+                    // Handle errors here
+                    console.log('ERRORS: ' + data.error);
+                }
+                $("#file-upload-progress-bar").val(100);
+            },
+            error: function(jqXHR, textStatus, errorThrown)
+            {
+                // Handle errors here
+                console.log('ERRORS in Upload: ' + textStatus);
+                $("#file-upload-progress-bar").replaceWith('<p>Error in File Upload</p>');
+            }
+        });
+    });
+
+    $("#text-submit-form").on('submit', function (event)
+    {
+        var text = $("#text-submission-input").val();
+        console.log("submitting text \"" + text + '"');
+        client.sendEntry(text);
+    });
+
+    $("#topic-submission").on('submit', function (event)
+    {
+        var topic = $("#topic-submission-input").val();
+        console.log("sending topic " + topic);
+        client.sendTopic(topic);
+    });
+
+    $("#room-creation-form").on('submit', function (event)
+    {
+        var name = $("#room-name-input").val();
+        console.log("Attempting to create room " + name);
+        client.createRoom(name);
+    });
 });
 
 function gamePageCb(eventName) {
@@ -108,8 +186,8 @@ function gamePageCb(eventName) {
             break;
 
     }
-
 }
+
 function fillRoomList(){
     var roomList = document.getElementById("room-list");
     roomList.options.length = 0;
@@ -137,17 +215,6 @@ function startGameOnClick(){
     client.startGame();
 }
 
-function submitTopicOnClick(){
-    var topic = document.getElementById("topic-submission-input").value;
-    console.log("sending topic " + topic);
-    client.sendTopic(topic);
-}
-    
-function submitContentOnClick(){
-    var request = new Message();
-    var submission = document.getElementById("content-submission-input").value;
-    client.sendEntry(submission);
-}
 
 function sendWinnerOnClick(){
     var winnerMsg = new Message();

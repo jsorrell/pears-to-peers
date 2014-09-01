@@ -20,10 +20,10 @@
         <button onclick="joinRoomOnClick()">Join Room </button>
     </div>
     
-    <form class="join-room in-room" id="room-creation" style="display: inline;">
-        <h4>Create a Room:</h4>
-        <input type="text" id="room-name">
-        <button id="create-room-button" type="button" onclick="createRoomOnClick()">Create Room</button>
+    <h4>Create a Room:</h4>
+    <form class="join-room in-room" id="room-creation-form" action="http://google.com" style="display: inline;">
+        <input type="text" id="room-name-input" />
+        <input id="create-room-button" type="submit" value="Create Room" />
     </form>
     
     <button class="in-room" id="start-game-button" style="display: block"; type="button" onclick="startGameOnClick();">Start Game</button>
@@ -35,14 +35,23 @@
     <form class="submitting-topic" id="topic-submission">
         <h4>Input your Topic:</h4>
         <input id="topic-submission-input" type="text">
-        <button id="topic-button" type="button" onclick="submitTopicOnClick()">Submit</button>
+        <input id="topic-button" type="submit" value="submit" />
     </form>
     
-    <form class="submitting-content" id="content-submission">
+    <div class="submitting-content" id="content-submission">
         <h4>Enter your Submission:</h4>
-        <input type="text" id="content-submission-input">
-        <button id="submission-button" type="button" onclick="submitContentOnClick()">Submit</button>
-    </form>
+        <p>Text Submission:</p>
+        <form id="text-submit-form">
+            <input type="text" id="text-submission-input" />
+            <input type="submit" id="submit-text-button" value="Submit Text" />
+        </form>
+        <p>File Submission (File cannot be of cats)</p>
+        <form id="file-submit-form">
+            <input type="file" id="file-submission-input" />
+            <input type="submit" id="submit-file-button" value="Submit File" />
+            <progress id="file-upload-progress-bar" value="0" max="100" />
+        </form>
+    </div>
 
     <div class="view-submissions select-winner" id="available-submissions">
         <h4>View Others' Submissions:</h4>
