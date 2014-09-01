@@ -1,30 +1,32 @@
-var http = require('http');
 var fs = require ('fs');
+var express = require('express');
+var bodyParser = require('body-parser');
 
-var filename = 0
 console.log("STARTING STREAMING SERVER ON PORT 8081");
-http.createServer(uploadHandler).listen(8081);
+var app = express();
+app.listen(8081);
 
-function uploadHandler(request,response){
-    response.writeHead(200,{'Access-Control-Allow-Origin': '*','Access-Control-Allow-Headers':'Origin, X-Requested-With, Content-Type, Accept'});
-    var destinationFile = fs.createWriteStream(filename.toString() + ".m4v");    
-    filename += 1;
-    request.pipe(destinationFile);
+app.use(bodyParser({uploadDir:'./uploads'})); //TODO: deprecated
 
-    var fileSize = request.headers['content-length'];
-    var uploadedBytes = 0;
+app.post('/file-upload', uploadHandler);
 
-    request.on('data',function(d){
-        console.log("got data");              
-        uploadedBytes += d.length;
-        var p = (uploadedBytes/fileSize) * 100;
-        response.write("Uploading " + parseInt(p)+ " %\n");
-        console.log("Uploading " + parseInt(p));
+function uploadHandler(req,res){
+    console.log(req.body);
+    console.log(req.files);
+    
+    req.form.on('progress', function(bytesReceived, bytesExpected) {
+        console.log(((bytesReceived / bytesExpected)*100) + "% uploaded");
     });
-
-    request.on('end', function(){
-        response.end("File Upload Complete");
+    
+    req.form.on('end', function(){
+        res.end("File Upload Complete");
     });
+    
+    var tmp_path = req.files.upload.path;
+    // set where the file should actually exists - in this case it is in the "images" directory
+    var target_path = './uploads' + req.files.upload.name;
+    // move the file from the temporary location to the intended location
+    fs.rename(tmp_path, target_path);
 }
 
 
