@@ -1,10 +1,11 @@
 /***server.js****/
 //TODO: change deletePlayer and add exit room function, delete empty rooms
-//TODO: support custom usernames, not just socket.id
 //TODO: standardize format of messages
-//TODO: GameManager should be a component passed to the RoomManager, defined in separate file
-        // rename current GameManager to be ServerManager
 //TODO: clicking submit before game breaks it
+//TODO: Delete rooms that are empty
+//TODO: video streaming/image streaming
+//TODO: different pages
+//TODO: profile for each user storing videos/images 
 
 var consts = {
     minPlayers : 3
@@ -633,12 +634,15 @@ ServerManager.prototype.handleMsg = function(msg, socket) {
     if (msg.messageType != "ServerMessage") {
         console.log(msg.eventName);
         console.log(msg.getRoomId());
+        
         if (!(msg.getRoomId() in this.roomInfo)) {
             var errorMsg = new Message.Message;
             errorMsg.setMessageType("ServerMessage");
             errorMsg.setEventName("Room " + msg.getRoomId() + " does not exist");
             socket.send(JSON.stringify(errorMsg));
+            return;
         }
+        
         this.roomInfo[msg.getRoomId()].handleMsg(msg, socket);
         return;
     }
