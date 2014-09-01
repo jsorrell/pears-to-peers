@@ -20,8 +20,7 @@ function uploadHandler(req,res)
 		var tmp_path = req.files.upload.path;
 	    // set where the file should actually exists
 	    var target_path = './uploads/' + req.files.upload.name;
-	    console.log(target_path);
-	    console.log(tmp_path);
+	    console.log("downloaded " + target_path);
 	    // move the file from the temporary location to the intended location
 	    fs.rename(tmp_path, target_path);
 	} else {
@@ -32,10 +31,4 @@ function uploadHandler(req,res)
     
 }
 
-// app.get("/:file",function (req,res)
-// {
-// 	console.log("requesting " + req.params.file);
-// 	if (req.params.file === "file-upload");
-// 	res.sendFile(__dirname+'/'+req.params.file)});
-// }
 app.use(express.static(__dirname));
