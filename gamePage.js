@@ -1,7 +1,6 @@
 var client = new Client(gamePageCb);
 var file;
 
-
 $(document).ready(function() {
     displayMessage("Connecting to Server", "connection-info");
     displayMessage("Please wait for Connection", "room-info", "bad");

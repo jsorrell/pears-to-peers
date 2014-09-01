@@ -826,7 +826,7 @@ console.log("STARTING STREAMING SERVER ON PORT 8081");
 var app = express();
 app.listen(8081);
 
-app.use(multiparty({uploadDir:'./uploads'}));
+app.use(multiparty({uploadDir:'uploads'}));
 
 app.post("/file-upload",uploadHandler);
 
@@ -836,7 +836,7 @@ function uploadHandler(req,res)
             res.json({receivedFile: true});
 
             var tmp_path = req.files.submissionFile.path;
-            var dir = './uploads/';
+            var dir = 'uploads/';
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir,0744);
             }
@@ -849,9 +849,10 @@ function uploadHandler(req,res)
             // Notify game that upload received and completed
             console.log(req.body.id);
             console.log(req.body.roomId);
-            var type = req.files.type;
-            type = type.split('\\')[0];
-            serverManager.handleFileReceipt(target_path,req.body.id,req.body.roomId,type);
+            serverManager.handleFileReceipt(target_path,
+                                            req.body.id,
+                                            req.body.roomId, 
+                                            req.files.type);
       } else {
             res.json({receivedFile: false});
       }
