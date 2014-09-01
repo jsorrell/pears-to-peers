@@ -46,8 +46,8 @@
             <input type="submit" id="submit-text-button" value="Submit Text" />
         </form>
         <p>File Submission (File cannot be of cats)</p>
-        <form id="file-submit-form">
-            <input type="file" id="file-submission-input" />
+        <form id="file-submit-form" enctype="multipart/form-data">
+            <input type="file" id="file-submission-input" name="upload" />
             <input type="submit" id="submit-file-button" value="Submit File" />
             <progress id="file-upload-progress-bar" value="0" max="100" />
         </form>

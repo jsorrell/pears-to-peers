@@ -1,6 +1,6 @@
 var client = new Client(gamePageCb);
 
-var file;
+var files;
 
 $(document).ready(function() {
     displayMessage("Connecting to Server", "connection-info");
@@ -15,30 +15,30 @@ $(document).ready(function() {
 
     $("#file-submission-input").on('change', function (event)
     {
-      var files = event.target.files;
-      if (files.length >= 1){
-        file = files[0];
-        console.log(file);
-      } else {
-        file = null;
-      }
+      files = event.target.files;
     });
 
     $("#file-submit-form").on('submit', function (event)
     {
         event.stopPropagation(); // Stop stuff happening
         event.preventDefault(); // Totally stop stuff happening
+        
         var data = new FormData();
-        data.append('upload',file);
+        jQuery.each($('#file-submission-input')[0].files, function(i, file) {
+            data.append('upload', file);
+        });
+        console.log(data);
+
+
         $.ajax({
             async: true,
             url: 'http://localhost:8081/file-upload',
             type: 'POST',
             data: data,
             cache: false,
+            contentType: false,
             dataType: "text",
             processData: false, // Don't process the files
-            contentType: "application/octet-stream",
             crossDomain: true,
             success: function(data, textStatus, jqXHR)
             {

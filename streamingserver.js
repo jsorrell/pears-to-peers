@@ -1,33 +1,24 @@
-var http = require('http');
 var fs = require ('fs');
+var express = require('express');
+var multiparty = require("connect-multiparty");
 
-var filename = 0
 console.log("STARTING STREAMING SERVER ON PORT 8081");
-http.createServer(uploadHandler).listen(8081);
+var app = express();
+app.listen(8081);
 
-function uploadHandler(request,response){
-    var lastPercent = 0;
-    response.writeHead(200,{'Access-Control-Allow-Origin': '*','Access-Control-Allow-Headers':'Origin, X-Requested-With, Content-Type, Accept'});
-    var destinationFile = fs.createWriteStream("uploads/" + filename.toString());    
-    filename += 1;
-    request.pipe(destinationFile);
+app.use(multiparty({uploadDir:'./uploads'})); //TODO: deprecated
 
-    var fileSize = request.headers['content-length'];
-    var uploadedBytes = 0;
+app.post("/file-upload",uploadHandler);
 
-    request.on('data',function(d){
-        uploadedBytes += d.length;
-        var p = parseInt((uploadedBytes/fileSize) * 100);
-        if (p != lastPercent) {
-            response.write(parseInt(p) + '-');
-            console.log('"UploadComplete": ' + parseInt(p));
-            lastPercent = p;
-        }
-    });
-
-    request.on('end', function(){
-        response.end();
-    });
+function uploadHandler(req,res)
+{   
+    var tmp_path = req.files.upload.path;
+    // set where the file should actually exists - in this case it is in the "images" directory
+    var target_path = './uploads/' + req.files.upload.name;
+    console.log(target_path);
+    console.log(tmp_path);
+    // move the file from the temporary location to the intended location
+    fs.rename(tmp_path, target_path);
 }
 
 
