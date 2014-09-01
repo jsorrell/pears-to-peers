@@ -8,10 +8,11 @@ http.createServer(uploadHandler).listen(8081);
 function uploadHandler(request,response){
     response.writeHead(200,{'Access-Control-Allow-Origin': '*'});
     var destinationFile = fs.createWriteStream(filename.toString());      
+    filename += 1;      
     request.pipe(destinationFile);
 
     var fileSize = request.headers['content-length'];
-    var uploadedBytes = 0 ;
+    var uploadedBytes = 0;
 
     request.on('data',function(d){  
         console.log("got data");              
