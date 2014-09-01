@@ -1,6 +1,6 @@
 var client = new Client(gamePageCb);
+var file;
 
-var files;
 
 $(document).ready(function() {
     displayMessage("Connecting to Server", "connection-info");
@@ -9,26 +9,30 @@ $(document).ready(function() {
 
     client.connect("ws://localhost:8080");
 
+    $('#submit-file-button').prop({disabled: true});
+    $.support.cors = true;
+
     $("form").submit(function (e){
         e.preventDefault();
     });
 
     $("#file-submission-input").on('change', function (event)
     {
-      files = event.target.files;
+      var files = event.target.files;
+      if (files.length === 0){
+        $('#submit-file-button').prop({disabled: true});
+      } else {
+        console.log("a");
+        file = $('#file-submission-input')[0].files[0];
+        $('#submit-file-button').prop({disabled: false});
+      }
     });
 
     $("#file-submit-form").on('submit', function (event)
-    {
-        event.stopPropagation(); // Stop stuff happening
-        event.preventDefault(); // Totally stop stuff happening
-        
+    {   
         var data = new FormData();
-        jQuery.each($('#file-submission-input')[0].files, function(i, file) {
-            data.append('upload', file);
-        });
-        console.log(data);
-
+        console.log(file);
+        data.append('upload',file);
 
         $.ajax({
             async: true,
@@ -36,15 +40,20 @@ $(document).ready(function() {
             type: 'POST',
             data: data,
             cache: false,
+            "Content-Length": file.size,
             contentType: false,
-            dataType: "text",
+            dataType: "json",
             processData: false, // Don't process the files
-            crossDomain: true,
             success: function(data, textStatus, jqXHR)
             {
                 if(typeof data.error === 'undefined')
                 {
                     console.log(data);
+                    if (data.receivedFile){
+                        $("#file-upload-progress-bar").val(100);
+                    } else {
+                        $("#file-upload-progress-bar").replaceWith('<p>Error in File Upload</p>');
+                    }
                 }
                 else
                 {
@@ -58,6 +67,26 @@ $(document).ready(function() {
                 // Handle errors here
                 console.log('ERRORS in Upload: ' + textStatus);
                 $("#file-upload-progress-bar").replaceWith('<p>Error in File Upload</p>');
+            },
+            xhr: function()
+            {
+                var xhr = new window.XMLHttpRequest();
+                //Upload progress
+                console.log("creating xhr");
+                xhr.upload.onprogress = function(evt){
+                    console.log("loaded " + evt.loaded);
+                    var percentComplete = evt.loaded / file.size * 100;
+                    console.log(percentComplete);
+                    $("#file-upload-progress-bar").val(Math.round(percentComplete));
+                }; 
+                return xhr;
+                // //Download progress
+                // XMLHttpRequest.addEventListener("progress", function(evt){
+                //   if (evt.lengthComputable) {  
+                //     var percentComplete = evt.loaded / evt.total;
+                //     //Do something with download progress
+                //   }
+                // }, false); 
             }
         });
     });
