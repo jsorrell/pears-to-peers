@@ -650,7 +650,10 @@ ServerManager.prototype.handleMsg = function(msg, socket) {
     this.fire(msg, socket);
 }
 
-ServerManager.prototype.handleFileReceipt = function(dataPath,clientId,roomId)
+ServerManager.prototype.handleFileReceipt = function(dataPath, 
+                                                     clientId, 
+                                                     roomId, 
+                                                     type)
 {
     if (!roomId in this.roomInfo) {
         console.log("invalid room " + roomId);
@@ -669,7 +672,7 @@ ServerManager.prototype.handleFileReceipt = function(dataPath,clientId,roomId)
         return;
     }
         
-    room.gameManager.allSubmissions[clientId] = {type: "file", data: dataPath};
+    room.gameManager.allSubmissions[clientId] = {type: type, data: dataPath};
 }
 
 function attachServerManagerEvents(serverManager) {
@@ -846,8 +849,9 @@ function uploadHandler(req,res)
             // Notify game that upload received and completed
             console.log(req.body.id);
             console.log(req.body.roomId);
-            serverManager.handleFileReceipt(target_path,req.body.id,req.body.roomId);
-
+            var type = req.files.type;
+            type = type.split('\\')[0];
+            serverManager.handleFileReceipt(target_path,req.body.id,req.body.roomId,type);
       } else {
             res.json({receivedFile: false});
       }
