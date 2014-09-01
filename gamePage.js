@@ -86,12 +86,20 @@ function gamePageCb(eventName) {
                 viewState("view-submissions");
                 displayMessage("View others' submissions", "room-info");
             }
+
+            console.log("submissions2:");
             console.log(client.submissions);
-            $.each(client.submissions,function(index, val) {
-                console.log("index:");
-                console.log(index);
-                $("#submission-list").append("<option value=\""+index+"\">"+val+"</option>");
-            });
+            var submissionList = document.getElementById("submission-list");
+            submissionList.options.length = 0;
+            for (var submissionId in client.submissions) {
+                var el = document.createElement("option");
+                var submission = client.submissions[submissionId].data;
+                el.textContent = submission.slice(submission.lastIndexOf("/")+1);
+                console.log("submission3:");
+                console.log(client.submissions[submissionId]);
+                el.value = submission;
+                submissionList.appendChild(el);
+            }
             break;
             
         case "peerList":
@@ -113,14 +121,7 @@ function gamePageCb(eventName) {
             break;
             
         case "submission":
-            var submissionList = document.getElementById("submission-list");
-            submissionList.options.length = 0;
-            for(var i=0; i<client.submissions.length; i++) {
-                var el = document.createElement("option");
-                el.textContent = client.submissions[i];
-                el.value = client.submissions[i];   
-                submissionList.appendChild(el);
-            }
+
             
             break;
             

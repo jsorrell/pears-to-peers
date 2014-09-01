@@ -8,7 +8,7 @@
 //TODO: profile for each user storing videos/images 
 
 var consts = {
-    minPlayers : 3
+    minPlayers: 2
 };
 
 //external packages
@@ -314,7 +314,7 @@ GameManager.prototype.deletePlayer = function(playerId) {
         this.submissionsMap = {};
         this.gameState = GameManager.timeouts.ELECT_LEADER;   
         this.run();
-        return;  
+        return;
     }           
     
     delete this.allSubmissions[playerId];
@@ -437,7 +437,7 @@ GameManager.prototype.submissionTimeout = function(){
     var submissionsMap = {};
     
     var i = 0;
-    for (var player in this.allSubmissions){
+    for (var player in this.allSubmissions) {
         submissions[i] = this.allSubmissions[player];
         submissionsMap[i] = player;
         i += 1;
@@ -523,7 +523,7 @@ function attachGameManagerEvents(gameManager){
             return;
         }
         
-        this.allSubmissions[socket.id] = data.getSubmission();
+        this.allSubmissions[socket.id] = {type: "text", data: data.getSubmission()};
     });
     
     //CHOOSE WINNER
@@ -599,8 +599,8 @@ function ServerManager(port){
     
 //MANIPULATORS:
     this.on = function(eventName, callback){
-                  this.events[eventName] = callback;
-              };
+        this.events[eventName] = callback;
+    };
               
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
         console.log("CALLING FIRE ON " + msg.eventName);
@@ -650,16 +650,36 @@ ServerManager.prototype.handleMsg = function(msg, socket) {
     this.fire(msg, socket);
 }
 
+ServerManager.prototype.handleFileReceipt = function(dataPath,clientId,roomId)
+{
+    if (!roomId in this.roomInfo) {
+        console.log("invalid room " + roomId);
+        return;
+    }
+
+    var room = this.roomInfo[roomId];
+
+    if (!clientId in room.playerInfo) {
+        console.log("invalid player id " + clientId + " in room " + roomId);
+        return;
+    }
+
+    if (room.gameManager.gameState != GameManager.gameStates.SUBMISSION_PERIOD) {
+        console.log("received submission at invalid time");
+        return;
+    }
+        
+    room.gameManager.allSubmissions[clientId] = {type: "file", data: dataPath};
+}
+
 function attachServerManagerEvents(serverManager) {
   var websocket = serverManager.websocket;
   
   websocket.on('connection', function(socket) { //a connection opened so register callbacks for the socket
     console.log('connect');
-    iolog('connect');
 
     socket.id = id();
     console.log('new socket got id: ' + socket.id);
-    iolog('new socket got id: ' + socket.id);
     
     //send id to person
     
@@ -809,31 +829,30 @@ app.post("/file-upload",uploadHandler);
 
 function uploadHandler(req,res)
 {
-  if (req.files.upload){
-    res.set({
-      'Access-Control-Allow-Origin': '*'
-    }).status(200).json({receivedFile: true});
+      if (req.files.submissionFile){
+            res.json({receivedFile: true});
 
-    var tmp_path = req.files.upload.path;
-      // set where the file should actually exists
-      var target_path = './uploads/' + req.files.upload.name;
-      console.log("downloaded " + target_path);
-      // move the file from the temporary location to the intended location
-      fs.rename(tmp_path, target_path);
-  } else {
-    res.set({
-      'Access-Control-Allow-Origin': '*'
-    }).status(200).json({receivedFile: false});
-  }
+            var tmp_path = req.files.submissionFile.path;
+            var dir = './uploads/';
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir,0744);
+            }
+            // set where the file should actually exist
+            var target_path = dir + req.files.submissionFile.name;
+            console.log("downloaded " + target_path);
+            // move the file from the temporary location to the intended location
+            fs.rename(tmp_path, target_path);
+            
+            // Notify game that upload received and completed
+            console.log(req.body.id);
+            console.log(req.body.roomId);
+            serverManager.handleFileReceipt(target_path,req.body.id,req.body.roomId);
+
+      } else {
+            res.json({receivedFile: false});
+      }
     
 }
 
 //FIXME: gives access to all files in directory
 app.use(express.static(__dirname));
-
-
-
-
-
-
-

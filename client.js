@@ -103,7 +103,7 @@ Client.prototype.onmessage = function(rawMsg){
 
         case "submission":
             console.log("GOT SUBMISSION: " + msg.getSubmission());
-            this.submissions.push(msg.getSubmission());
+            this.submissions = msg.getSubmission();
             this.pageCallback(eventName);
             break;
          
@@ -185,7 +185,9 @@ Client.prototype.sendEntry = function(entry) {
     else if (entry.type === 'file') {
         var fileData = new FormData();
         console.log(entry);
-        fileData.append('upload', entry.data);
+        fileData.append('submissionFile', entry.data);
+        fileData.append('id', this.myID);
+        fileData.append('roomId', this.currentRoomId);
 
         $.ajax({
             async: true,
