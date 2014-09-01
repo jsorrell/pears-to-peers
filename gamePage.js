@@ -56,7 +56,28 @@ $(document).ready(function() {
 
     $('#view-submission-button').on('click',function (event) 
     {
-        console.log($('#submission-list').val());
+        var submission = $('#submission-list:selected').val();
+        var genType = submission.type.split('/')[0];
+        switch (genType) {
+            case text:
+                $('#submission-view-area').html(submission.data);
+            break;
+
+            case video:
+                $('#submission-view-area').html('<video width="320" height="240" controls>
+<source src="'+submission.data+'" type="'+submission.type+'">
+Your browser does not support the video tag.
+</video>');
+            break;
+
+            case image:
+
+            break;
+
+            case audio:
+
+            break;
+        }
         //$('#submission-view-area')
     });
 

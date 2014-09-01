@@ -235,8 +235,6 @@ Client.prototype.sendEntry = function(entry) {
     }
 }
 
-
-
 Client.prototype.sendWinner = function(winner) {
     var request = new Message();
     request.setMessageType("GameMessage");

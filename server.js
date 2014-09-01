@@ -851,7 +851,6 @@ function uploadHandler(req,res)
       } else {
             res.json({receivedFile: false});
       }
-    
 }
 
 //FIXME: gives access to all files in directory
