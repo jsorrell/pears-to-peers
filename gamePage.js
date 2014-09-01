@@ -28,17 +28,15 @@ $(document).ready(function() {
     {
         event.stopPropagation(); // Stop stuff happening
         event.preventDefault(); // Totally stop stuff happening
-     
-        // Progress bar
-        $("#file-upload-progress-bar").val(10);
-        
+        var data = new FormData();
+        data.append('upload',file);
         $.ajax({
             async: true,
-            url: 'http://localhost:8081',
+            url: 'http://localhost:8081/file-upload',
             type: 'POST',
-            data: file,
+            data: data,
             cache: false,
-            dataType: 'json',
+            dataType: "text",
             processData: false, // Don't process the files
             contentType: "application/octet-stream",
             crossDomain: true,
@@ -46,15 +44,14 @@ $(document).ready(function() {
             {
                 if(typeof data.error === 'undefined')
                 {
-                    // Success so call function to process the form
-                    submitForm(event, data);
+                    console.log(data);
                 }
                 else
                 {
                     // Handle errors here
+                    console.log("got " + data);
                     console.log('ERRORS: ' + data.error);
                 }
-                $("#file-upload-progress-bar").val(100);
             },
             error: function(jqXHR, textStatus, errorThrown)
             {
@@ -85,6 +82,7 @@ $(document).ready(function() {
         console.log("Attempting to create room " + name);
         client.createRoom(name);
     });
+
 });
 
 function gamePageCb(eventName) {
