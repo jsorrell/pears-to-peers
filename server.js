@@ -849,9 +849,10 @@ function uploadHandler(req,res)
             // Notify game that upload received and completed
             console.log(req.body.id);
             console.log(req.body.roomId);
-            var type = req.files.type;
-            type = type.split('\\')[0];
-            serverManager.handleFileReceipt(target_path,req.body.id,req.body.roomId,type);
+            serverManager.handleFileReceipt(target_path,
+                                            req.body.id,
+                                            req.body.roomId, 
+                                            req.files.type);
       } else {
             res.json({receivedFile: false});
       }
