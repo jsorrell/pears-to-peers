@@ -6,8 +6,8 @@ console.log("STARTING STREAMING SERVER ON PORT 8081");
 http.createServer(uploadHandler).listen(8081);
 
 function uploadHandler(request,response){
-    response.writeHead(200,{'Access-Control-Allow-Origin': '*'});
-    var destinationFile = fs.createWriteStream(filename.toString() + ".m4v");      
+    response.writeHead(200,{'Access-Control-Allow-Origin': '*','Access-Control-Allow-Headers':'Origin, X-Requested-With, Content-Type, Accept'});
+    var destinationFile = fs.createWriteStream(filename.toString() + ".m4v");    
     filename += 1;
     request.pipe(destinationFile);
 

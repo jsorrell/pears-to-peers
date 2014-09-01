@@ -1,6 +1,6 @@
 var client = new Client(gamePageCb);
 
-var files;
+var file;
 
 $(document).ready(function() {
     displayMessage("Connecting to Server", "connection-info");
@@ -15,7 +15,13 @@ $(document).ready(function() {
 
     $("#file-submission-input").on('change', function (event)
     {
-      files = event.target.files;
+      var files = event.target.files;
+      if (files.length >= 1){
+        file = files[0];
+        console.log(file);
+      } else {
+        file = null;
+      }
     });
 
     $("#file-submit-form").on('submit', function (event)
@@ -25,22 +31,17 @@ $(document).ready(function() {
      
         // Progress bar
         $("#file-upload-progress-bar").val(10);
-     
-        // Create a formdata object and add the files
-        var data = new FormData();
-        $.each(files, function(key, value)
-        {
-            data.append(key, value);
-        });
         
         $.ajax({
+            async: true,
             url: 'http://localhost:8081',
             type: 'POST',
-            data: data,
+            data: file,
             cache: false,
             dataType: 'json',
             processData: false, // Don't process the files
-            contentType: false, // Set content type to false as jQuery will tell the server its a query string request
+            contentType: "application/octet-stream",
+            crossDomain: true,
             success: function(data, textStatus, jqXHR)
             {
                 if(typeof data.error === 'undefined')
