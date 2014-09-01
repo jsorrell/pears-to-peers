@@ -18,7 +18,7 @@ $(document).ready(function() {
       files = event.target.files;
     });
 
-    $("#file-submit-form").on('submit', function (event)https://www.google.com/?gws_rd=ssl
+    $("#file-submit-form").on('submit', function (event)
     {
         event.stopPropagation(); // Stop stuff happening
         event.preventDefault(); // Totally stop stuff happening
