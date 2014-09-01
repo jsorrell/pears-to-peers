@@ -29,73 +29,15 @@ $(document).ready(function() {
     });
 
     $("#file-submit-form").on('submit', function (event)
-    {   
-        var data = new FormData();
-        console.log(file);
-        data.append('upload',file);
-
-        $.ajax({
-            async: true,
-            url: 'http://localhost:8081/file-upload',
-            type: 'POST',
-            data: data,
-            cache: false,
-            "Content-Length": file.size,
-            contentType: false,
-            dataType: "json",
-            processData: false, // Don't process the files
-            success: function(data, textStatus, jqXHR)
-            {
-                if(typeof data.error === 'undefined')
-                {
-                    console.log(data);
-                    if (data.receivedFile){
-                        $("#file-upload-progress-bar").val(100);
-                    } else {
-                        $("#file-upload-progress-bar").replaceWith('<p>Error in File Upload</p>');
-                    }
-                }
-                else
-                {
-                    // Handle errors here
-                    console.log("got " + data);
-                    console.log('ERRORS: ' + data.error);
-                }
-            },
-            error: function(jqXHR, textStatus, errorThrown)
-            {
-                // Handle errors here
-                console.log('ERRORS in Upload: ' + textStatus);
-                $("#file-upload-progress-bar").replaceWith('<p>Error in File Upload</p>');
-            },
-            xhr: function()
-            {
-                var xhr = new window.XMLHttpRequest();
-                //Upload progress
-                console.log("creating xhr");
-                xhr.upload.onprogress = function(evt){
-                    console.log("loaded " + evt.loaded);
-                    var percentComplete = evt.loaded / file.size * 100;
-                    console.log(percentComplete);
-                    $("#file-upload-progress-bar").val(Math.round(percentComplete));
-                }; 
-                return xhr;
-                // //Download progress
-                // XMLHttpRequest.addEventListener("progress", function(evt){
-                //   if (evt.lengthComputable) {  
-                //     var percentComplete = evt.loaded / evt.total;
-                //     //Do something with download progress
-                //   }
-                // }, false); 
-            }
-        });
+    {
+        client.sendEntry({type: "file", data: file});
     });
 
     $("#text-submit-form").on('submit', function (event)
     {
         var text = $("#text-submission-input").val();
         console.log("submitting text \"" + text + '"');
-        client.sendEntry(text);
+        client.sendEntry({type: "text", data: text});
     });
 
     $("#topic-submission").on('submit', function (event)
@@ -110,6 +52,12 @@ $(document).ready(function() {
         var name = $("#room-name-input").val();
         console.log("Attempting to create room " + name);
         client.createRoom(name);
+    });
+
+    $('#view-submission-button').on('click',function (event) 
+    {
+        console.log($('#submission-list').val());
+        //$('#submission-view-area')
     });
 
 });
@@ -211,6 +159,12 @@ function gamePageCb(eventName) {
             displayMessage("Connection to server closed", "connection-info", "bad");
             displayMessage("Please refresh page", "room-info", "bad");
             viewState("disconnected");
+            break;
+        case "fileUploadProgress":
+            $("#file-upload-progress-bar").val(client.fileUploadProgress);
+            break;
+        case "fileUploadError":
+            $("#file-upload-progress-bar").replaceWith('<p>Error in File Upload</p>');
             break;
 
     }

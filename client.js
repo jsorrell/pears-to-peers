@@ -15,6 +15,7 @@ function Client(pageCallback) {
     this.topic = "";
     this.isLeader = false;
     this.leaderId = "";
+    this.fileUploadProgress = 0;
 
     this.onopen = function(evt) {
         console.log("WebSocket open");
@@ -164,14 +165,75 @@ Client.prototype.sendTopic = function(topic) {
     this.serverConn.send(JSON.stringify(request));
 }
 
-Client.prototype.sendEntry = function(entry) {
-    var request = new Message();
-    request.setMessageType("GameMessage");
-    request.setEventName("submission");
-    request.setSubmission(entry);
-    request.setRoomId(client.getCurrentRoomId());
-    this.serverConn.send(JSON.stringify(request));
+/* entry:
+{
+    type: "text" or "file",
+    data: "text" or file data
 }
+
+*/
+
+Client.prototype.sendEntry = function(entry) {
+    if (entry.type === 'text') {
+        var request = new Message();
+        request.setMessageType("GameMessage");
+        request.setEventName("submission");
+        request.setSubmission(entry.data);
+        request.setRoomId(this.getCurrentRoomId());
+        this.serverConn.send(JSON.stringify(request));
+    }
+    else if (entry.type === 'file') {
+        var fileData = new FormData();
+        console.log(entry);
+        fileData.append('upload', entry.data);
+
+        $.ajax({
+            async: true,
+            url: 'http://localhost:8081/file-upload',
+            type: 'POST',
+            data: fileData,
+            cache: false,
+            contentType: false,
+            dataType: "json",
+            processData: false, // Don't process the files
+            success: $.proxy(function(data, textStatus, jqXHR)
+            {
+                if(typeof data.error === 'undefined')
+                {
+                    //success
+                    console.log(data);
+                    if (data.receivedFile){
+                        this.pageCallback("fileUploadSuccess");
+                    }
+                }
+                else
+                {
+                    // Handle errors here
+                    console.log('Upload Errors: ' + data.error);
+                }
+            },this),
+            error: $.proxy(function(jqXHR, textStatus, errorThrown)
+            {
+                // Handle errors here
+                console.log('ERRORS in Upload: ' + textStatus);
+                this.pageCallback("fileUploadError");
+            },this),
+            xhr: $.proxy(function()
+            {
+                var xhr = new window.XMLHttpRequest();
+                //Upload progress
+                console.log("creating xhr");
+                xhr.upload.onprogress = $.proxy(function(evt){
+                    this.fileUploadProgress = evt.loaded / file.size * 100;
+                    this.pageCallback("fileUploadProgress");
+                },this); 
+                return xhr;
+            },this)
+        });
+    }
+}
+
+
 
 Client.prototype.sendWinner = function(winner) {
     var request = new Message();
