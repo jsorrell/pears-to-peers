@@ -7,7 +7,7 @@ $(document).ready(function() {
     displayMessage("Please wait for Connection", "room-info", "bad");
     viewState("disconnected");
 
-    client.connect("ws://localhost:8080");
+    client.connect("ws://" + window.location.hostname + ":8080");
 
     $('#submit-file-button').prop({disabled: true});
     $.support.cors = true;
@@ -79,7 +79,10 @@ Your browser does not support the video tag.\
             break;
 
             case 'audio':
-                $('#submission-view-area').html('<audio src="'+ submission.data+'"type="'+submission.type+'">');
+                $('#submission-view-area').html('<audio controls>\
+<source src="'+ submission.data+'" type="'+submission.type+'" />\
+Your browser does not support the audio element.\
+</audio>');
             break;
         }
     });
