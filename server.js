@@ -673,6 +673,7 @@ ServerManager.prototype.handleFileReceipt = function(dataPath,
     }
         
     room.gameManager.allSubmissions[clientId] = {type: type, data: dataPath};
+    console.log(room.gameManager.allSubmissions);
 }
 
 function attachServerManagerEvents(serverManager) {
@@ -852,7 +853,7 @@ function uploadHandler(req,res)
             serverManager.handleFileReceipt(target_path,
                                             req.body.id,
                                             req.body.roomId, 
-                                            req.files.type);
+                                            req.files.submissionFile.type);
       } else {
             res.json({receivedFile: false});
       }

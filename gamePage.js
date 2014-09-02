@@ -75,14 +75,13 @@ Your browser does not support the video tag.\
             break;
 
             case 'image':
-
+                $('#submission-view-area').html('<img width="320" height="240" src="'+ submission.data + '" />');
             break;
 
             case 'audio':
-
+                $('#submission-view-area').html('<audio src="'+ submission.data+'"type="'+submission.type+'">');
             break;
         }
-        //$('#submission-view-area')
     });
 
 });
