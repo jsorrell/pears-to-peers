@@ -44,79 +44,79 @@ Client.prototype.connect = function(addr){
 //MANIPULATORS
 Client.prototype.onmessage = function(rawMsg){
     var msg = new Message(JSON.parse(rawMsg.data));
-    var eventName = msg.getEventName();
-    console.log("GOT EVENT: " + eventName);
+    var eventType = msg.getEventName();
+    console.log("GOT EVENT: " + eventType);
     console.log(msg);
-    switch(eventName) {
+    switch(eventType) {
         case "noWinnerChosen":
-            this.pageCallback(eventName);
+            this.pageCallback(eventType);
             break;
             
         case "chooseWinner":
-            this.submissions = msg.getAllSubmissions();
+            this.submissions = msg.get(allSubmissions);
             console.log("submissions: ");
             console.log(this.submissions);
-            this.pageCallback(eventName);
+            this.pageCallback(eventType);
             break;
             
         case "givenId":
-            this.myID = msg.getYourId();
-            this.pageCallback(eventName);
+            this.myID = msg.get(yourId);
+            this.pageCallback(eventType);
             console.log("My ID is " + this.myID);
             break;
             
         case "peerList":
-            var peerList = msg.getPeerList();
+            var peerList = msg.get(peerList);
             for (idx in peerList) {
                 if (!this.scores.hasOwnProperty(peerList[idx]))
                     this.scores[peerList[idx]] = 0;
             }
-            this.pageCallback(eventName);
+            this.pageCallback(eventType);
             break;
         
         case "roomList":
-            this.setRooms(msg.getRoomList());
+            this.setRooms(msg.get(roomList));
             console.log("rooms set to: ");
             console.log(this.getRooms());
-            this.pageCallback(eventName);
+            this.pageCallback(eventType);
             break;
         
         case "roomCreated":
-            this.pageCallback(eventName);
+            this.pageCallback(eventType);
             break;
         
         case "joinedRoom":
-            this.currentRoomId = msg.getRoomId();
-            this.pageCallback(eventName);
+            this.currentRoomId = msg.get(roomId);
+            this.pageCallback(eventType);
             break;
         
         case "scores":
-            console.log(msg.getScores());
-            this.scores = msg.getScores();
-            this.pageCallback(eventName);
+            console.log(msg.get(scores));
+            this.scores = msg.get(scores);
+            this.pageCallback(eventType);
             break;
             
         case "startGame":
             console.log("GAME STARTED");
-            this.pageCallback(eventName);
+            this.pageCallback(eventType);
             break;
 
         case "submission":
             console.log("GOT SUBMISSION: " + msg.getSubmission());
-            this.submissions = msg.getSubmission();
-            this.pageCallback(eventName);
+            this.submissions = msg.get(submission);
+            this.pageCallback(eventType);
             break;
          
         case "leaderChosen":
-            this.isLeader = (msg.getLeader() === this.myID);
-            this.leaderId = msg.getLeader();
-            this.pageCallback(eventName);
+            this.isLeader = (msg.get(leader) === this.myID);
+            this.leaderId = msg.get(leader);
+            this.pageCallback(eventType);
             break;
 
         case "topic":
-            this.topic = msg.getTopic();
+            this.topic = msg.get(topic);
             console.log("the topic is " + this.topic);
-            this.pageCallback(eventName);
+            this.pageCallback(eventType);
             break;
         
     }
@@ -132,36 +132,36 @@ Client.prototype.setRooms = function(rooms){
 
 Client.prototype.createRoom = function(roomId){
     request = new Message();
-    request.setMessageType("ServerMessage");
-    request.setEventName("createRoom");
-    request.setRoomId(roomId);
+    request.messageType = "ServerMessage";
+    request.eventType = "createRoom";
+    request.data.roomId = roomId;
     this.serverConn.send(JSON.stringify(request));
 }
 
 Client.prototype.joinRoom = function(roomId){
     request = new Message();
-    request.setMessageType("RoomMessage");
-    request.setEventName("joinRoom");
-    request.setRoomId(roomId);
+    request.messageType = "RoomMessage";
+    request.eventType = "joinRoom";
+    request.data.roomId = roomId;
     this.serverConn.send(JSON.stringify(request));
     console.log("joined room request sent");
 }
 
 Client.prototype.startGame = function(){
     var request = new Message();
-    request.setMessageType("RoomMessage");
-    request.setEventName("startGame");
+    request.messageType = "RoomMessage";
+    request.eventType = "startGame";
     console.log("CURRENT ROOM ID: " + this.currentRoomId);      
-    request.setRoomId(this.currentRoomId);
+    request.data.roomId = this.currentRoomId;
     this.serverConn.send(JSON.stringify(request));
 }
 
 Client.prototype.sendTopic = function(topic) {
     var request = new Message();
-    request.setMessageType("GameMessage");
-    request.setEventName("topicChosen");
-    request.setTopic(topic);
-    request.setRoomId(client.getCurrentRoomId());
+    request.messageType = "GameMessage";
+    request.eventType = "topicChosen";
+    request.data.topic = topic;
+    request.data.roomId = client.getCurrentRoomId();
     this.serverConn.send(JSON.stringify(request));
 }
 

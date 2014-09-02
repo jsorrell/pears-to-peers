@@ -75,13 +75,13 @@ function RoomManager(roomId) {
     this.gameManager      = {};
     
 //MANIPULATORS:
-    this.on = function(eventName, callback){
-      this.events[eventName] = callback;
+    this.on = function(eventType, callback){
+      this.events[eventType] = callback;
     };
           
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
-        console.log("CALLING FIRE ON " + msg.eventName);
-        var event = this.events[msg.eventName];
+        console.log("CALLING FIRE ON " + msg.eventType);
+        var event = this.events[msg.eventType];
         event.call(this, msg, socket); //call on this roomManager object
     }
     
@@ -130,9 +130,9 @@ function RoomManager(roomId) {
         //send everyone in the room the updated playerlist
         for(var id in playerIds) {
            // send new peer a list of all peers
-           response.setMessageType("RoomMessage");
-           response.setEventName("peerList");
-           response.setPeerList(playerIds);
+           response.messageType = "RoomMessage";
+           response.eventType = "peerList";
+           response.data.peerList = playerIds;
            var clientConn = this.getSocket(playerIds[id]);
            clientConn.send(JSON.stringify(response));
         }
@@ -161,81 +161,85 @@ function RoomManager(roomId) {
 
 function attachRoomManagerEvents(roomManager) {
     roomManager.on('joinRoom', function(data, socket) {
-    console.log("Player joined room");
-    iolog('join_room');
-    
-    var roomId = data.getRoomId();
-    var response = new Message.Message();
-    
-    if(this.gameStarted){
-        response.setEventName("Game already started!");
-        socket.send(JSON.stringify(response));
-        return;
-    }
- 
-    if(socket.id in this.playerInfo){
-        response.setEventName("Player already in room!");
-        socket.send(JSON.stringify(response));
-        return;
-    }
-    
-    this.addPlayer(socket.id, socket);
-    var joinConfirm = new Message.Message;
-    joinConfirm.setMessageType("RoomMessage");
-    joinConfirm.setEventName("joinedRoom");
-    joinConfirm.setRoomId(roomId);
-    socket.send(JSON.stringify(joinConfirm));
-    
-    var room = serverManager.roomInfo[roomId];
-    var playerIds = this.playerIds;
-    
-    for(var id in playerIds) {
-        console.log("Player %s is in the room", playerIds[id]);
-    }
-    
-    for(var id in playerIds){
-        // send new peer a list of all peers
-        response.setMessageType("RoomMessage");
-        response.setEventName("peerList");
-        response.setPeerList(playerIds);
-        var clientConn = room.getSocket(playerIds[id]);
-        clientConn.send(JSON.stringify(response));
-    }
-  })
+        var roomId = data.getRoomId();
+        var response = new Message.Message();
+        
+        if(this.gameStarted){
+            response.eventType = "Error";
+            response.messageType = "RoomMessage";
+            response.data.details = "Game already started!";
+            socket.send(JSON.stringify(response));
+            return;
+        }
+     
+        if(socket.id in this.playerInfo){
+            response.eventType = "Error";
+            response.messageType = "RoomMessage";
+            response.data.details = "Player already in room!";
+            socket.send(JSON.stringify(response));
+            return;
+        }
+        
+        console.log("Player joined room");
+        iolog('join_room');
+        
+        this.addPlayer(socket.id, socket);
+        var joinConfirm = new Message.Message;
+        joinConfirm.messageType = "RoomMessage";
+        joinConfirm.eventType = "joinedRoom";
+        joinConfirm.data.roomId = roomId;
+        socket.send(JSON.stringify(joinConfirm));
+        
+        var room = serverManager.roomInfo[roomId];
+        var playerIds = this.playerIds;
+        
+        for(var id in playerIds) {
+            console.log("Player %s is in the room", playerIds[id]);
+        }
+        
+        for(var id in playerIds){
+            // send new peer a list of all peers
+            response.messageType = "RoomMessage";
+            response.eventType = "peerList";
+            response.data.peerList = playerIds;
+            var clientConn = room.getSocket(playerIds[id]);
+            clientConn.send(JSON.stringify(response));
+        }
+    })
   
-  roomManager.on('startGame', function(data, socket){ //TODO: change number of players when one dies
-      console.log('start_game');
-      iolog('start_game');
+    roomManager.on('startGame', function(data, socket){ //TODO: change number of players when one dies
+        console.log('start_game');
+        iolog('start_game');
         
-      var roomId = data.getRoomId(); //room is roomID
-      var playerId = socket.id;
-      var response = new Message.Message();
-        
-      if(!this.playerInfo[playerId].started){
-          this.playerInfo[playerId].started = true; //TODO: put this in StartPlayer() call returning true when game started
-          this.numStarted += 1;
-          var numPlayers = this.getNumPlayers();
-          if(this.numStarted == numPlayers && numPlayers >= consts.minPlayers){
-              console.log("STARTING GAME!");
-              this.gameStarted = true; 
-              this.gameManager = new GameManager(this.playerInfo, 
-                                                 this.playerIds);
-              
-              attachGameManagerEvents(this.gameManager);
-              response.setMessageType("RoomMessage");
-              response.setEventName("startGame");
-              finalResponse = JSON.stringify(response);
-              for(var player in this.playerInfo){
-                  var soc = this.getSocket(player);
-                  soc.send(finalResponse);
-              }
+        var roomId = data.getRoomId(); //room is roomID
+        var playerId = socket.id;
+        var response = new Message.Message();
+          
+        if(!this.playerInfo[playerId].started){
+            this.playerInfo[playerId].started = true; //TODO: put this in StartPlayer() call returning true when game started
+            this.numStarted += 1;
+            var numPlayers = this.getNumPlayers();
+            if(this.numStarted == numPlayers && numPlayers >= consts.minPlayers){
+                console.log("STARTING GAME!");
+                this.gameStarted = true; 
+                this.gameManager = new GameManager(this.playerInfo, 
+                                                   this.playerIds);
+                
+                attachGameManagerEvents(this.gameManager);
+                response.messageType = "RoomMessage";
+                response.eventType = "startGame";
+                finalResponse = JSON.stringify(response);
+                for(var player in this.playerInfo){
+                    var soc = this.getSocket(player);
+                    soc.send(finalResponse);
+                }
 
-              this.gameManager.run();
-          }
-      }else{
-          return;
-      }//TODO: let server handle mapping user->room later 
-  })
+                this.gameManager.run();
+            }
+        }else{
+            return;
+        }//TODO: let server handle mapping user->room later 
+    })
 }  
   
 RoomManager.prototype.handleMsg = function(msg, socket) {
@@ -273,13 +277,13 @@ function GameManager(playerInfo, playerIds){
     //MANIPULATORS:
 
     //register callbacks based on gameState and event name
-    this.on = function(eventName, callback){
-                  this.events[eventName] = callback;
+    this.on = function(eventType, callback){
+                  this.events[eventType] = callback;
               };
               
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
-        console.log("CALLING FIRE ON " + msg.eventName);
-        var event = this.events[msg.eventName];
+        console.log("CALLING FIRE ON " + msg.eventType);
+        var event = this.events[msg.eventType];
         event.call(this, msg, socket); //call on this roomManager object
     }
 }
@@ -321,8 +325,8 @@ GameManager.prototype.deletePlayer = function(playerId) {
     
     if (this.gameState == GameManager.gameStates.CHOOSE_WINNER){
         var notification = new Message.Message();
-        notification.setMessageType("GameMessage");
-        notification.setEventName("chooseWinner");
+        notification.messageType = "GameMessage";
+        notification.eventType = "chooseWinner";
         var submissions = {};
         var submissionsMap = {};
         
@@ -334,7 +338,7 @@ GameManager.prototype.deletePlayer = function(playerId) {
         }
         
         this.submissionsMap = submissionsMap;
-        notification.setAllSubmissions(submissions);
+        notification.data.allSubmissions = submissions;
         notification = JSON.stringify(notification);
         
         for(player in this.playerInfo){
@@ -393,9 +397,9 @@ GameManager.prototype.chooseLeaderTimeout = function(){
     
     var notification = new Message.Message();
     
-    notification.setEventName("leaderChosen");
-    notification.setMessageType("GameMessage");
-    notification.setLeader(leader);
+    notification.eventType = "leaderChosen";
+    notification.messageType = "GameMessage";
+    notification.data.leader = leader;
     this.gameState = GameManager.gameStates.CHOOSE_TOPIC;
     notification = JSON.stringify(notification);
     
@@ -416,10 +420,10 @@ GameManager.prototype.chooseTopicTimeout = function(){
 
 GameManager.prototype.setTopic = function(topic){
   var notification = new Message.Message();
-  notification.setMessageType("GameMessage");
-  notification.setEventName("topic");
+  notification.messageType = "GameMessage";
+  notification.eventType = "topic";
   console.log("Topic is " + topic);
-  notification.setTopic(topic);
+  notification.data.topic = topic;
   notification = JSON.stringify(notification);
   for(player in this.playerInfo){
       this.playerInfo[player].getSocket().send(notification);
@@ -431,8 +435,8 @@ GameManager.prototype.submissionTimeout = function(){
     this.gameState = GameManager.gameStates.CHOOSE_WINNER;
     //tell leader to choose a winner
     var notification = new Message.Message();
-    notification.setMessageType("GameMessage");
-    notification.setEventName("chooseWinner");
+    notification.messageType = "GameMessage";
+    notification.eventType = "chooseWinner";
     var submissions = {};
     var submissionsMap = {};
     
@@ -444,7 +448,7 @@ GameManager.prototype.submissionTimeout = function(){
     }
     
     this.submissionsMap = submissionsMap;
-    notification.setAllSubmissions(submissions);
+    notification.data.allSubmissions = submissions;
     notification = JSON.stringify(notification);
     
     for(player in this.playerInfo){
@@ -459,8 +463,8 @@ GameManager.prototype.winnerTimeout = function(){
     console.log("CHOOSE WINNER TIMEOUT");
     this.gameState = GameManager.gameStates.INTERMISSION;
     var notification = new Message.Message();
-    notification.setMessageType("GameMessage");
-    notification.setEventName("noWinnerChosen");
+    notification.messageType = "GameMessage";
+    notification.eventType = "noWinnerChosen";
     notification = JSON.stringify(notification);
     
     for(player in this.playerInfo){
@@ -472,9 +476,9 @@ GameManager.prototype.winnerTimeout = function(){
 
 GameManager.prototype.sendScores = function(){
     var scoresMessage = new Message.Message;
-    scoresMessage.setMessageType("GameMessage");
-    scoresMessage.setEventName("scores");
-    scoresMessage.setScores(this.scores);
+    scoresMessage.messageType = "GameMessage";
+    scoresMessage.eventType = "scores";
+    scoresMessage.data.scores = this.scores;
     scoresMessage = JSON.stringify(scoresMessage);
     
     for(var player in this.playerInfo){
@@ -540,8 +544,8 @@ function attachGameManagerEvents(gameManager){
         
         var winner = this.submissionsMap[data.getWinner()];
         if (!data.winner in this.scores) {
-            notification.setMessageType("GameMessage");
-            notification.setEventName("chooseWinner");
+            notification.messageType = "GameMessage";
+            notification.eventType = "chooseWinner";
             notification = JSON.stringify(notification);
             this.playerInfo[this.leaderId].getSocket().send(notification);
             clearTimeout(this.timeout);
@@ -552,9 +556,9 @@ function attachGameManagerEvents(gameManager){
         this.gameState = GameManager.gameStates.INTERMISSION;
         clearTimeout(this.timeout);
         var submission = new Message.Message;
-        submission.setMessageType("GameMessage");
-        submission.setEventName("winnerChosen");
-        submission.setWinner(winner);
+        submission.messageType = "GameMessage";
+        submission.eventTye = "winnerChosen";
+        submission.data.winner = winner;
         this.scores[winner] += 1;
         submission = JSON.stringify(submission);
         for(var player in this.playerInfo){
@@ -598,13 +602,13 @@ function ServerManager(port){
     this.websocket = listen(port);
     
 //MANIPULATORS:
-    this.on = function(eventName, callback){
-        this.events[eventName] = callback;
+    this.on = function(eventType, callback){
+        this.events[eventType] = callback;
     };
               
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
-        console.log("CALLING FIRE ON " + msg.eventName);
-        var event = serverManager.events[msg.eventName];
+        console.log("CALLING FIRE ON " + msg.eventType);
+        var event = serverManager.events[msg.eventType];
         event.call(this, msg, socket); //call on this roomManager object
     }
 }
@@ -632,13 +636,15 @@ function listen(server) {
 
 ServerManager.prototype.handleMsg = function(msg, socket) {
     if (msg.messageType != "ServerMessage") {
-        console.log(msg.eventName);
+        console.log(msg.eventType);
         console.log(msg.getRoomId());
         
         if (!(msg.getRoomId() in this.roomInfo)) {
             var errorMsg = new Message.Message;
-            errorMsg.setMessageType("ServerMessage");
-            errorMsg.setEventName("Room " + msg.getRoomId() + " does not exist");
+            errorMsg.messageType = "ServerMessage";
+            errorMsg.eventType = "Error";
+            errorMsg.data.details = 
+                                  "Room " + msg.getRoomId() + " does not exist";
             socket.send(JSON.stringify(errorMsg));
             return;
         }
@@ -688,15 +694,15 @@ function attachServerManagerEvents(serverManager) {
     //send id to person
     
     var idMsg = new Message.Message;
-    idMsg.setMessageType("ServerMessage");
-    idMsg.setEventName("givenId");
-    idMsg.setYourId(socket.id);
+    idMsg.messageType = "ServerMessage";
+    idMsg.eventType = "givenId";
+    idMsg.data.yourId = socket.id;
     socket.send(JSON.stringify(idMsg));
     
     var roomMsg = new Message.Message;
-    roomMsg.setMessageType("ServerMessage");
-    roomMsg.setEventName("roomList");
-    roomMsg.setRoomList(serverManager.rooms);
+    roomMsg.messageType = "ServerMessage";
+    roomMsg.eventType = "roomList";
+    roomMsg.data.roomList = serverManager.rooms;
     var roomMsg = JSON.stringify(roomMsg);    
     socket.send(roomMsg);
     
@@ -706,7 +712,7 @@ function attachServerManagerEvents(serverManager) {
       var data = JSON.parse(msg);
       console.log(data);
       var decodedMsg = new Message.Message(data);
-      console.log(decodedMsg.eventName);
+      console.log(decodedMsg.eventType);
       serverManager.handleMsg(decodedMsg, socket);
     });
 
@@ -746,8 +752,9 @@ function attachServerManagerEvents(serverManager) {
     //check if room already exists
     if (roomId in this.roomInfo) {
         var errorMsg = new Message.Message;
-        errorMsg.setMessageType("ServerMessage");
-        errorMsg.setEventName("Room already exists with name " + roomId);
+        errorMsg.messageType = "ServerMessage";
+        errorMsg.eventType = "Error";
+        errorMsg.data.details = "Room already exists with name " + roomId;
         socket.send(JSON.stringify(errorMsg));
         return;
     }
@@ -761,26 +768,26 @@ function attachServerManagerEvents(serverManager) {
     this.rooms.push(roomId);
     
     var response = new Message.Message();
-    response.setMessageType("ServerMessage");
-    response.setEventName("roomCreated");
-    response.setRoomId(roomId);
+    response.messageType = "ServerMessage";
+    response.eventType = "roomCreated";
+    response.data.roomId = roomId;
     
     socket.send(JSON.stringify(response));
 
     /* send join confirmation */
     var joinConfirm = new Message.Message;
-    joinConfirm.setMessageType("RoomMessage");
-    joinConfirm.setEventName("joinedRoom");
-    joinConfirm.setRoomId(roomId);
+    joinConfirm.messageType = "RoomMessage";
+    joinConfirm.eventType = "joinedRoom";
+    joinConfirm.data.roomId = roomId;
     socket.send(JSON.stringify(joinConfirm));
     
     //tell everyone about the new room
     var response = new Message.Message();
     var rooms = [];
 
-    response.setMessageType("ServerMessage");
-    response.setEventName("roomList");
-    response.setRoomList(this.rooms);
+    response.messageType = "ServerMessage";
+    response.eventType = "roomList";
+    response.data.roomList = this.rooms;
     var finalresponse = JSON.stringify(response);
     
     for (var player in this.sockets) {
