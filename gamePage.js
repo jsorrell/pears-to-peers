@@ -1,6 +1,7 @@
 var client = new Client(gamePageCb);
 var file;
 
+
 $(document).ready(function() {
     displayMessage("Connecting to Server", "connection-info");
     displayMessage("Please wait for Connection", "room-info", "bad");
@@ -55,25 +56,29 @@ $(document).ready(function() {
 
     $('#view-submission-button').on('click',function (event) 
     {
-        var submission = $('#submission-list:selected').val();
+        var submissionId = $('#submission-list').val();
+        var submission = client.submissions[submissionId];
+        console.log("trfewfewwe");
+        console.log(submission);
+
         var genType = submission.type.split('/')[0];
         switch (genType) {
-            case text:
+            case 'text':
                 $('#submission-view-area').html(submission.data);
             break;
 
-            case video:
-                $('#submission-view-area').html('<video width="320" height="240" controls>
-<source src="'+submission.data+'" type="'+submission.type+'">
-Your browser does not support the video tag.
+            case 'video':
+                $('#submission-view-area').html('<video width="320" height="240" controls>\
+<source src="'+submission.data+'" type="'+submission.type+'">\
+Your browser does not support the video tag.\
 </video>');
             break;
 
-            case image:
+            case 'image':
 
             break;
 
-            case audio:
+            case 'audio':
 
             break;
         }
@@ -113,11 +118,12 @@ function gamePageCb(eventName) {
             submissionList.options.length = 0;
             for (var submissionId in client.submissions) {
                 var el = document.createElement("option");
-                var submission = client.submissions[submissionId].data;
-                el.textContent = submission.slice(submission.lastIndexOf("/")+1);
+                var submission = client.submissions[submissionId];
+                console.log(submission);
+                el.textContent = submission.data.slice(submission.data.lastIndexOf("/")+1);
                 console.log("submission3:");
                 console.log(client.submissions[submissionId]);
-                el.value = submission;
+                el.value = submissionId;
                 submissionList.appendChild(el);
             }
             break;
