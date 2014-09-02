@@ -161,7 +161,7 @@ function RoomManager(roomId) {
 
 function attachRoomManagerEvents(roomManager) {
     roomManager.on('joinRoom', function(data, socket) {
-        var roomId = data.getRoomId();
+        var roomId = data.get("roomId");
         var response = new Message.Message();
         
         if(this.gameStarted){
@@ -211,7 +211,7 @@ function attachRoomManagerEvents(roomManager) {
         console.log('start_game');
         iolog('start_game');
         
-        var roomId = data.getRoomId(); //room is roomID
+        var roomId = data.get("roomId"); //room is roomID
         var playerId = socket.id;
         var response = new Message.Message();
           
@@ -243,7 +243,7 @@ function attachRoomManagerEvents(roomManager) {
 }  
   
 RoomManager.prototype.handleMsg = function(msg, socket) {
-    if (msg.getMessageType() == "GameMessage") {
+    if (msg.messageType == "GameMessage") {
         this.gameManager.handleMsg(msg, socket);
     } else {
         this.fire(msg, socket);
@@ -512,7 +512,7 @@ function attachGameManagerEvents(gameManager){
           return;
       }
 
-      this.setTopic(data.getTopic());
+      this.setTopic(data.get("topic"));
       clearTimeout(this.timeout);
       this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
       this.run();
@@ -527,7 +527,8 @@ function attachGameManagerEvents(gameManager){
             return;
         }
         
-        this.allSubmissions[socket.id] = {type: "text", data: data.getSubmission()};
+        this.allSubmissions[socket.id] = 
+                                   {type: "text", data: data.get("submission")};
     });
     
     //CHOOSE WINNER
@@ -542,7 +543,7 @@ function attachGameManagerEvents(gameManager){
             return;
         }
         
-        var winner = this.submissionsMap[data.getWinner()];
+        var winner = this.submissionsMap[data.get("winner")];
         if (!data.winner in this.scores) {
             notification.messageType = "GameMessage";
             notification.eventType = "chooseWinner";
@@ -636,20 +637,21 @@ function listen(server) {
 
 ServerManager.prototype.handleMsg = function(msg, socket) {
     if (msg.messageType != "ServerMessage") {
+        var roomId = msg.get("roomId")
         console.log(msg.eventType);
-        console.log(msg.getRoomId());
+        console.log(roomId);
         
-        if (!(msg.getRoomId() in this.roomInfo)) {
+        if (!(roomId in this.roomInfo)) {
             var errorMsg = new Message.Message;
             errorMsg.messageType = "ServerMessage";
             errorMsg.eventType = "Error";
             errorMsg.data.details = 
-                                  "Room " + msg.getRoomId() + " does not exist";
+                                  "Room " + roomId + " does not exist";
             socket.send(JSON.stringify(errorMsg));
             return;
         }
         
-        this.roomInfo[msg.getRoomId()].handleMsg(msg, socket);
+        this.roomInfo[roomId].handleMsg(msg, socket);
         return;
     }
     
@@ -748,7 +750,7 @@ function attachServerManagerEvents(serverManager) {
 
   serverManager.on('createRoom', function(data, socket){
     console.log("create_room");
-    var roomId = data.getRoomId();
+    var roomId = data.get("roomId");
     //check if room already exists
     if (roomId in this.roomInfo) {
         var errorMsg = new Message.Message;

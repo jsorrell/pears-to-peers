@@ -44,7 +44,7 @@ Client.prototype.connect = function(addr){
 //MANIPULATORS
 Client.prototype.onmessage = function(rawMsg){
     var msg = new Message(JSON.parse(rawMsg.data));
-    var eventType = msg.getEventName();
+    var eventType = msg.eventType;
     console.log("GOT EVENT: " + eventType);
     console.log(msg);
     switch(eventType) {
@@ -53,20 +53,20 @@ Client.prototype.onmessage = function(rawMsg){
             break;
             
         case "chooseWinner":
-            this.submissions = msg.get(allSubmissions);
+            this.submissions = msg.get("allSubmissions");
             console.log("submissions: ");
             console.log(this.submissions);
             this.pageCallback(eventType);
             break;
             
         case "givenId":
-            this.myID = msg.get(yourId);
+            this.myID = msg.get("yourId");
             this.pageCallback(eventType);
             console.log("My ID is " + this.myID);
             break;
             
         case "peerList":
-            var peerList = msg.get(peerList);
+            var peerList = msg.get("peerList");
             for (idx in peerList) {
                 if (!this.scores.hasOwnProperty(peerList[idx]))
                     this.scores[peerList[idx]] = 0;
@@ -75,7 +75,7 @@ Client.prototype.onmessage = function(rawMsg){
             break;
         
         case "roomList":
-            this.setRooms(msg.get(roomList));
+            this.setRooms(msg.get("roomList"));
             console.log("rooms set to: ");
             console.log(this.getRooms());
             this.pageCallback(eventType);
@@ -86,13 +86,13 @@ Client.prototype.onmessage = function(rawMsg){
             break;
         
         case "joinedRoom":
-            this.currentRoomId = msg.get(roomId);
+            this.currentRoomId = msg.get("roomId");
             this.pageCallback(eventType);
             break;
         
         case "scores":
-            console.log(msg.get(scores));
-            this.scores = msg.get(scores);
+            console.log(msg.get("scores"));
+            this.scores = msg.get("scores");
             this.pageCallback(eventType);
             break;
             
@@ -102,19 +102,19 @@ Client.prototype.onmessage = function(rawMsg){
             break;
 
         case "submission":
-            console.log("GOT SUBMISSION: " + msg.getSubmission());
+            console.log("GOT SUBMISSION: " + msg.get("submission"));
             this.submissions = msg.get(submission);
             this.pageCallback(eventType);
             break;
          
         case "leaderChosen":
-            this.isLeader = (msg.get(leader) === this.myID);
-            this.leaderId = msg.get(leader);
+            this.isLeader = (msg.get("leader") === this.myID);
+            this.leaderId = msg.get("leader");
             this.pageCallback(eventType);
             break;
 
         case "topic":
-            this.topic = msg.get(topic);
+            this.topic = msg.get("topic");
             console.log("the topic is " + this.topic);
             this.pageCallback(eventType);
             break;
@@ -191,7 +191,7 @@ Client.prototype.sendEntry = function(entry) {
 
         $.ajax({
             async: true,
-            url: 'http://localhost:8081/file-upload',
+            url: 'http://' + window.location.hostname + ':8081/file-upload',
             type: 'POST',
             data: fileData,
             cache: false,
@@ -237,10 +237,10 @@ Client.prototype.sendEntry = function(entry) {
 
 Client.prototype.sendWinner = function(winner) {
     var request = new Message();
-    request.setMessageType("GameMessage");
-    request.setEventName("winnerChosen");
-    request.setWinner(winner);
-    request.setRoomId(client.getCurrentRoomId());
+    request.messageType = "GameMessage";
+    request.eventType = "winnerChosen";
+    request.data.winner = winner;
+    request.data.roomId = client.getCurrentRoomId();
     this.serverConn.send(JSON.stringify(request));
 }
 /*Client.prototype.OnOpenHandler= function(evt){

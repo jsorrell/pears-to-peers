@@ -18,7 +18,7 @@ function Message(MessageCopy){
     }
     
     this.get = function (dataField) {
-        return this.data.dataField;
+        return this.data[dataField];
     }
 }
 
