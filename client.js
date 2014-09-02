@@ -191,7 +191,7 @@ Client.prototype.sendEntry = function(entry) {
 
         $.ajax({
             async: true,
-            url: 'http://localhost:8081/file-upload',
+            url: 'http://' + window.location.hostname + ':8081/file-upload',
             type: 'POST',
             data: fileData,
             cache: false,

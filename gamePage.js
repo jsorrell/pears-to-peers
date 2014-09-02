@@ -10,7 +10,7 @@ $(document).ready(function() {
     client.connect("ws://" + window.location.hostname + ":8080");
 
     $('#submit-file-button').prop({disabled: true});
-    $.support.cors = true;
+    $('#winner-button').prop({disabled: true});
 
     $("form").submit(function (e){
         e.preventDefault();
@@ -54,7 +54,7 @@ $(document).ready(function() {
         client.createRoom(name);
     });
 
-    $('#view-submission-button').on('click',function (event) 
+    $('#view-submission-button').on('click',function (event)
     {
         var submissionId = $('#submission-list').val();
         var submission = client.submissions[submissionId];
@@ -87,6 +87,11 @@ Your browser does not support the audio element.\
         }
     });
 
+    $('#winner-button').click(function (event)
+    {
+        var winner = parseInt($('#submission-list').val());
+        client.sendWinner(winner);
+    });
 });
 
 function gamePageCb(eventName) {
@@ -118,6 +123,7 @@ function gamePageCb(eventName) {
             console.log(client.submissions);
             var submissionList = document.getElementById("submission-list");
             submissionList.options.length = 0;
+            $('#winner-button').prop({disabled: true});
             for (var submissionId in client.submissions) {
                 var el = document.createElement("option");
                 var submission = client.submissions[submissionId];
@@ -128,8 +134,11 @@ function gamePageCb(eventName) {
                 el.value = submissionId;
                 submissionList.appendChild(el);
             }
+            if (submissionList.options.length != 0) {
+                $('#winner-button').prop({disabled: false});
+            }
             break;
-            
+
         case "peerList":
         case "scores":
             $("#score-table-ids").html("");
@@ -139,20 +148,15 @@ function gamePageCb(eventName) {
                 $("#score-table-scores").append("<td>"+score+"</td>");
             });
             break;
-            
+
         case "roomCreated":
             break;
-    
+
         case "joinedRoom":
             displayMessage("You have joined room " + client.currentRoomId, "room-info", "good");
             viewState("in-room");
             break;
-            
-        case "submission":
 
-            
-            break;
-            
         case "noWinnerChosen":
         case "startGame":
             displayMessage("The game has started. Choosing leader.", "room-info", "good");
@@ -226,14 +230,6 @@ function startGameOnClick(){
     client.startGame();
 }
 
-
-function sendWinnerOnClick(){
-    var winnerMsg = new Message();
-    console.log("Winner: ");
-    console.log($("#winner-list").val());
-    var winner = parseInt($("#submission-list").val());
-    client.sendWinner(winner);
-}
 
 //status is good, neutral, or bad
 function displayMessage(message,id,status){

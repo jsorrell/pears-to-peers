@@ -19,13 +19,13 @@
         <select id="room-list"></select>
         <button onclick="joinRoomOnClick()">Join Room </button>
     </div>
-    
+
     <h4>Create a Room:</h4>
     <form class="join-room in-room" id="room-creation-form" action="http://google.com" style="display: inline;">
         <input type="text" id="room-name-input" />
         <input id="create-room-button" type="submit" value="Create Room" />
     </form>
-    
+
     <button class="in-room" id="start-game-button" style="display: block"; type="button" onclick="startGameOnClick();">Start Game</button>
     <table class="in-room submitting-topic submitting-content view-submissions select-winner waiting"id="score-table">
         <tr id="score-table-ids"> </tr>
@@ -37,8 +37,8 @@
         <input id="topic-submission-input" type="text">
         <input id="topic-button" type="submit" value="submit" />
     </form>
-    
-    <div class="submitting-content message-box" id="content-submission">
+
+    <div class="submitting-content" id="content-submission">
         <h4>Enter your Submission:</h4>
         <p>Text Submission:</p>
         <form id="text-submit-form">
@@ -59,7 +59,7 @@
         <button id="view-submission-button" type="button">View</button>
         <div id="submission-view-area"></div>
     </div>
-    <button class="select-winner" id="winner-button" type="button" onclick="sendWinnerOnClick()">Submit</button>
+    <button class="select-winner" id="winner-button" type="button">Submit</button>
 
 </body>
 </html>
