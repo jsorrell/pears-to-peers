@@ -16,6 +16,7 @@ function Client(pageCallback) {
     this.isLeader = false;
     this.leaderId = "";
     this.fileUploadProgress = 0;
+    this.state = "";
 
     this.onopen = function(evt) {
         console.log("WebSocket open");
@@ -43,10 +44,12 @@ Client.prototype.connect = function(addr){
 
 //MANIPULATORS
 Client.prototype.onmessage = function(rawMsg){
-    var msg = new Message(JSON.parse(rawMsg.data));
+    var msg = Message.copyMessage(JSON.parse(rawMsg.data));
     var eventType = msg.eventType;
     console.log("GOT EVENT: " + eventType);
     console.log(msg);
+    if (!msg.eventType)
+        console.log(rawMsg);
     switch(eventType) {
         case "noWinnerChosen":
             this.pageCallback(eventType);
@@ -66,11 +69,27 @@ Client.prototype.onmessage = function(rawMsg){
             break;
 
         case "peerList":
-            var peerList = msg.get("peerList");
-            for (idx in peerList) {
-                if (!this.scores.hasOwnProperty(peerList[idx]))
-                    this.scores[peerList[idx]] = 0;
+            var add = msg.get("add");
+            if (add) {
+                for (var peer in add)
+                    if ($.inArray(peer,this.scores) == -1) {
+                        console.log("added peer " + add[peer]);
+                        this.scores[add[peer]] = 0;
+                    }
             }
+            var remove = msg.get("remove");
+            if (remove) {
+                for (var peer in remove)
+                    if ($.inArray(peer,this.scores) > -1) {
+                        console.log("removed peer " + remove[peer]);
+                        delete this.scores[remove[peer]];
+                    }
+            }
+            this.pageCallback(eventType);
+            break;
+
+        case "state":
+            this.state = msg.get("state");
             this.pageCallback(eventType);
             break;
 
@@ -81,11 +100,8 @@ Client.prototype.onmessage = function(rawMsg){
             this.pageCallback(eventType);
             break;
 
-        case "roomCreated":
-            this.pageCallback(eventType);
-            break;
-
         case "joinedRoom":
+            this.scores = msg.get("scores");
             this.currentRoomId = msg.get("roomId");
             this.pageCallback(eventType);
             break;
@@ -98,6 +114,8 @@ Client.prototype.onmessage = function(rawMsg){
 
         case "startGame":
             console.log("GAME STARTED");
+            this.leaderId = msg.get("leader");
+            this.isLeader = (this.leaderId === this.myID);
             this.pageCallback(eventType);
             break;
 
@@ -107,16 +125,13 @@ Client.prototype.onmessage = function(rawMsg){
             this.pageCallback(eventType);
             break;
 
-        case "leaderChosen":
-            this.isLeader = (msg.get("leader") === this.myID);
-            this.leaderId = msg.get("leader");
-            this.pageCallback(eventType);
-            break;
-
         case "topic":
             this.topic = msg.get("topic");
             console.log("the topic is " + this.topic);
             this.pageCallback(eventType);
+            break;
+        case "error":
+            console.log("Error: " + msg.get("details"));
             break;
 
     }
@@ -131,10 +146,7 @@ Client.prototype.setRooms = function(rooms){
 }
 
 Client.prototype.createRoom = function(roomId){
-    request = new Message();
-    request.messageType = "ServerMessage";
-    request.eventType = "createRoom";
-    request.data.roomId = roomId;
+    request = new Message("ServerMessage","createRoom",{roomId: roomId});
     this.serverConn.send(JSON.stringify(request));
 }
 
