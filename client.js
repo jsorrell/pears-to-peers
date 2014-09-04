@@ -1,14 +1,14 @@
              /********/
              /*Client*/
              /********/
-             
-//Description: Represents a player 
+
+//Description: Represents a player
 
 function Client(pageCallback) {
     this.scores = {};
     this.rooms = [];
     this.submissions = {};
-    this.myID = ""; 
+    this.myID = "";
     this.currentRoomId = null;
     this.serverConn;
     this.pageCallback = pageCallback;
@@ -51,20 +51,20 @@ Client.prototype.onmessage = function(rawMsg){
         case "noWinnerChosen":
             this.pageCallback(eventType);
             break;
-            
+
         case "chooseWinner":
             this.submissions = msg.get("allSubmissions");
             console.log("submissions: ");
             console.log(this.submissions);
             this.pageCallback(eventType);
             break;
-        
+
         case "givenId":
             this.myID = msg.get("yourId");
             this.pageCallback(eventType);
             console.log("My ID is " + this.myID);
             break;
-            
+
         case "peerList":
             var peerList = msg.get("peerList");
             for (idx in peerList) {
@@ -73,29 +73,29 @@ Client.prototype.onmessage = function(rawMsg){
             }
             this.pageCallback(eventType);
             break;
-        
+
         case "roomList":
             this.setRooms(msg.get("roomList"));
             console.log("rooms set to: ");
             console.log(this.getRooms());
             this.pageCallback(eventType);
             break;
-        
+
         case "roomCreated":
             this.pageCallback(eventType);
             break;
-        
+
         case "joinedRoom":
             this.currentRoomId = msg.get("roomId");
             this.pageCallback(eventType);
             break;
-        
+
         case "scores":
             console.log(msg.get("scores"));
             this.scores = msg.get("scores");
             this.pageCallback(eventType);
             break;
-            
+
         case "startGame":
             console.log("GAME STARTED");
             this.pageCallback(eventType);
@@ -106,7 +106,7 @@ Client.prototype.onmessage = function(rawMsg){
             this.submissions = msg.get(submission);
             this.pageCallback(eventType);
             break;
-         
+
         case "leaderChosen":
             this.isLeader = (msg.get("leader") === this.myID);
             this.leaderId = msg.get("leader");
@@ -159,7 +159,7 @@ Client.prototype.startGame = function(){
     var request = new Message();
     request.messageType = "RoomMessage";
     request.eventType = "startGame";
-    console.log("CURRENT ROOM ID: " + this.currentRoomId);      
+    console.log("CURRENT ROOM ID: " + this.currentRoomId);
     request.data.roomId = this.currentRoomId;
     this.serverConn.send(JSON.stringify(request));
 }
@@ -184,10 +184,9 @@ Client.prototype.sendTopic = function(topic) {
 Client.prototype.sendEntry = function(entry) {
     if (entry.type === 'text') {
         var request = new Message();
-        request.setMessageType("GameMessage");
-        request.setEventName("submission");
-        request.setSubmission(entry.data);
-        request.setRoomId(this.getCurrentRoomId());
+        request.messageType = "GameMessage";
+        request.eventType = "submission";
+        request.data = {submission: entry.data, roomId: this.getCurrentRoomId()};
         this.serverConn.send(JSON.stringify(request));
     }
     else if (entry.type === 'file') {
@@ -236,7 +235,7 @@ Client.prototype.sendEntry = function(entry) {
                 xhr.upload.onprogress = $.proxy(function(evt){
                     this.fileUploadProgress = evt.loaded / file.size * 100;
                     this.pageCallback("fileUploadProgress");
-                },this); 
+                },this);
                 return xhr;
             },this)
         });
