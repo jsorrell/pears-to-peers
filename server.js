@@ -15,6 +15,8 @@ var consts = {
 var WebSocketServer = require('ws').Server;
 var Message = require('./message'); //find in current directory
 
+var iolog = function(msg){};
+
 for (var i = 0; i < process.argv.length; i++) {
   var arg = process.argv[i];
   if (arg === "-debug") {
@@ -826,7 +828,7 @@ function id() {
 /* streaming server */
 /********************/
 
-ssConstants =
+var ssConstants =
 {
     port: 8081,
     tmp_path: __dirname + "/tmp",
@@ -839,18 +841,21 @@ var express = require('express');
 var app = express();
 var multiparty = require("connect-multiparty");
 
-console.log("STARTING STREAMING SERVER ON PORT " + toString(ssConstants.port));
+console.log("STARTING STREAMING SERVER ON PORT " + ssConstants.port.toString());
 app.listen(ssConstants.port);
 
 app.use(multiparty({uploadDir:ssConstants.upload_path}));
 
-if (!fs.existsSync(dir)) {
+if (!fs.existsSync(ssConstants.tmp_path)) {
+    console.log("Tmp dir doesn't exist. Creating.");
+    fs.mkdirSync(ssConstants.tmp_path,0744);
+}
+if (!fs.existsSync(ssConstants.upload_path)) {
     console.log("Uploads dir doesn't exist. Creating.");
-    fs.mkdirSync(dir,0744);
-    assert(fd.existsSync(dir));
+    fs.mkdirSync(ssConstants.upload_path,0744);
 }
 
-app.post(upload_addr,uploadHandler);
+app.post(ssConstants.upload_addr,uploadHandler);
 
 function uploadHandler(req,res)
 {
