@@ -70,8 +70,6 @@ function RoomManager(roomId) {
     this.numPlayers       = 0;
     this.numStarted       = 0; //number of players who have sent "start" signals
     this.gameStarted      = false;  
-    this.leaderId         = "";
-    this.leaderIndex      = 0;
     this.gameManager      = {};
     
 //MANIPULATORS:
@@ -116,7 +114,7 @@ function RoomManager(roomId) {
         
         delete this.playerInfo[playerId];
         this.numPlayers -= 1;
-         
+        
         if(this.gameStarted) {
            this.gameManager.deletePlayer(playerId);
         }
@@ -125,6 +123,10 @@ function RoomManager(roomId) {
             this.numStarted -= 1;
         }
           
+        if (this.numPlayers < consts.minPlayers) {
+            this.stopGame();
+        } 
+        
         var playerIds = this.playerIds;
         var response = new Message.Message;
         //send everyone in the room the updated playerlist
@@ -138,6 +140,30 @@ function RoomManager(roomId) {
         }
    }
 
+   this.stopGame = function(){
+       if (!this.gameStarted) {
+           return;
+       }
+       
+       this.gameStarted = false;
+       this.numStarted = 0;
+       
+       for(playerId in this.playerInfo) {
+           this.playerInfo[playerId].started = false;
+       }
+       
+       this.gameManager.stopGame();
+       var stopGameMsg = new Message.Message();
+       stopGameMsg.messageType = "RoomMessage";
+       stopGameMsg.eventType = "stopGame";
+       stopGameMsg.data.details = "Insufficient players to continue";
+       stopGameMsg = JSON.stringify(stopGameMsg);
+       for(var player in this.playerInfo){
+           console.log(player);
+           this.getSocket(player).send(stopGameMsg);
+       }
+   }
+   
    this.addCandidate = function(playerId){
        this.leaderCandidates.push(playerId);
    }
@@ -214,11 +240,12 @@ function attachRoomManagerEvents(roomManager) {
         var roomId = data.get("roomId"); //room is roomID
         var playerId = socket.id;
         var response = new Message.Message();
-          
         if(!this.playerInfo[playerId].started){
             this.playerInfo[playerId].started = true; //TODO: put this in StartPlayer() call returning true when game started
             this.numStarted += 1;
             var numPlayers = this.getNumPlayers();
+            console.log(this.numStarted);
+            console.log(numPlayers);
             if(this.numStarted == numPlayers && numPlayers >= consts.minPlayers){
                 console.log("STARTING GAME!");
                 this.gameStarted = true; 
@@ -244,6 +271,9 @@ function attachRoomManagerEvents(roomManager) {
   
 RoomManager.prototype.handleMsg = function(msg, socket) {
     if (msg.messageType == "GameMessage") {
+        if (!this.gameStarted) {
+            return;
+        }
         this.gameManager.handleMsg(msg, socket);
     } else {
         this.fire(msg, socket);
@@ -311,6 +341,7 @@ GameManager.prototype.deletePlayer = function(playerId) {
     delete this.playerInfo[playerId];
     delete this.scores[playerId];
     this.numPlayers -= 1;
+
     if (this.leaderId === playerId) {
         //stop this round and restart
         clearTimeout(this.timeout);
@@ -494,6 +525,12 @@ GameManager.prototype.intermissionEnded = function(){
     this.submissionsMap = {};
     this.sendScores();
     this.run();
+}
+
+GameManager.prototype.stopGame = function(){
+    console.log("STOPPING GAMEMANAGER\n");
+    clearTimeout(this.timeout);
+    this.gameState = GameManager.gameStates.ELECT_LEADER;
 }
 
 function attachGameManagerEvents(gameManager){
@@ -732,6 +769,23 @@ function attachServerManagerEvents(serverManager) {
       for (var i in serverManager.roomInfo) { //TODO: this doesn't need a loop
           room = serverManager.roomInfo[i];
           room.deletePlayer(socket.id);
+          if(room.numPlayers == 0) {
+              delete serverManager.roomInfo[i];
+              for (var j=0; j<serverManager.rooms.length; j++) {
+                  if (serverManager.rooms[j] == i) {
+                      serverManager.rooms.splice(i, 1);
+                  }
+              }
+              
+              var response = new Message.Message();
+              response.messageType = "ServerMessage";
+              response.eventType = "roomList";
+              response.data.roomList = serverManager.rooms;
+              var finalresponse = JSON.stringify(response);
+              for (var player in serverManager.sockets) {
+                  serverManager.sockets[player].send(finalresponse);
+              }
+          }
           break;
         }
       });

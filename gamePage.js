@@ -199,7 +199,10 @@ function gamePageCb(eventName) {
         case "fileUploadError":
             $("#file-upload-progress-bar").replaceWith('<p>Error in File Upload</p>');
             break;
-
+        case "stopGame":
+            viewState("in-room");
+            displayMessage("Waiting to start game", "room-info");
+            break;
     }
 }
 

@@ -58,7 +58,7 @@ Client.prototype.onmessage = function(rawMsg){
             console.log(this.submissions);
             this.pageCallback(eventType);
             break;
-            
+        
         case "givenId":
             this.myID = msg.get("yourId");
             this.pageCallback(eventType);
@@ -119,6 +119,14 @@ Client.prototype.onmessage = function(rawMsg){
             this.pageCallback(eventType);
             break;
         
+        case "stopGame":
+            this.scores = {};
+            this.submissions = {};
+            this.topic = "";
+            this.isLeader = false;
+            this.leaderId = "";
+            this.pageCallback(eventType);
+            break;
     }
 }
 
