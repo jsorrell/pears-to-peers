@@ -23,12 +23,11 @@ for (var i = 0; i < process.argv.length; i++) {
     iolog = function(msg) {
       console.log(msg);
     };
-    console.log('Debug mode on!');
   }
 }
 
 /****START THE SERVER****/
-console.log("STARTING SERVER ON PORT 8080");
+iolog("STARTING SERVER ON PORT 8080");
 var serverManager = new ServerManager(8080);
 attachServerManagerEvents(serverManager);
 /************************/
@@ -80,7 +79,7 @@ function RoomManager(roomId) {
     };
 
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
-        console.log("CALLING FIRE ON " + msg.eventType);
+        iolog("CALLING FIRE ON " + msg.eventType);
         var event = this.events[msg.eventType];
         event.call(this, msg, socket); //call on this roomManager object
     }
@@ -164,6 +163,7 @@ function attachRoomManagerEvents(roomManager) {
         var roomId = data.get("roomId");
         var response = new Message.Message();
 
+        //make sure game has not already started
         if(this.gameStarted){
             response.eventType = "Error";
             response.messageType = "RoomMessage";
@@ -172,6 +172,7 @@ function attachRoomManagerEvents(roomManager) {
             return;
         }
 
+        //make sure the player is not already in the room
         if(socket.id in this.playerInfo){
             response.eventType = "Error";
             response.messageType = "RoomMessage";
@@ -180,47 +181,40 @@ function attachRoomManagerEvents(roomManager) {
             return;
         }
 
-        console.log("Player joined room");
-        iolog('join_room');
+        iolog("Player " + socket.id.toString() + " joined room " + roomId);
 
+        //add the player to the room
         this.addPlayer(socket.id, socket);
+
+        //send the player a confirmation that he joined the room
         var joinConfirm = new Message.Message;
         joinConfirm.messageType = "RoomMessage";
         joinConfirm.eventType = "joinedRoom";
         joinConfirm.data.roomId = roomId;
         socket.send(JSON.stringify(joinConfirm));
 
-        var room = serverManager.roomInfo[roomId];
-        var playerIds = this.playerIds;
 
-        for(var id in playerIds) {
-            console.log("Player %s is in the room", playerIds[id]);
-        }
+        response.messageType = "RoomMessage";
+        response.eventType = "peerList";
+        response.data.peerList = this.playerIds;
 
-        for(var id in playerIds){
-            // send new peer a list of all peers
-            response.messageType = "RoomMessage";
-            response.eventType = "peerList";
-            response.data.peerList = playerIds;
-            var clientConn = room.getSocket(playerIds[id]);
-            clientConn.send(JSON.stringify(response));
-        }
+        // send a list of all peers to all clients
+        this.broadcast(response);
     })
 
-    roomManager.on('startGame', function(data, socket){ //TODO: change number of players when one dies
-        console.log('start_game');
-        iolog('start_game');
+    roomManager.on('startGame', function(data, socket){
+        iolog('New game started in room ' + this.roomId);
 
-        var roomId = data.get("roomId"); //room is roomID
         var playerId = socket.id;
         var response = new Message.Message();
 
-        if(!this.playerInfo[playerId].started){
+        if(!this.playerInfo[playerId].started) {
             this.playerInfo[playerId].started = true; //TODO: put this in StartPlayer() call returning true when game started
             this.numStarted += 1;
             var numPlayers = this.getNumPlayers();
+            //if enough players have started, the game starts
             if(this.numStarted == numPlayers && numPlayers >= consts.minPlayers){
-                console.log("STARTING GAME!");
+                iolog("Game starting in room " + this.roomId);
                 this.gameStarted = true;
                 this.gameManager = new GameManager(this.playerInfo,
                                                    this.playerIds);
@@ -235,8 +229,21 @@ function attachRoomManagerEvents(roomManager) {
                 }
 
                 this.gameManager.run();
+            } else {
+                //send a message to players saying who the room is waiting for
+                var numWaitingMessage = new Message.Message();
+                var waitingOn = [];
+                for (var player in this.playerInfo) {
+                    if (!this.playerInfo[player].started) {
+                        waitingOn.push(player);
+                    }
+                }
+                numWaitingMessage.messageType = "RoomMessage";
+                numWaitingMessage.eventType = "needMoreStartedPlayers";
+                numWaitingMessage.data = {numStarted: this.numStarted, numNeeded: consts.minPlayers, waitingOn: waitingOn};
+                this.broadcast(numWaitingMessage);
             }
-        }else{
+        } else {
             return;
         }//TODO: let server handle mapping user->room later
     })
@@ -247,6 +254,15 @@ RoomManager.prototype.handleMsg = function(msg, socket) {
         this.gameManager.handleMsg(msg, socket);
     } else {
         this.fire(msg, socket);
+    }
+}
+
+RoomManager.prototype.broadcast = function(message)
+{
+    for(var id in this.playerIds){
+        // send a list of all peers to all clients
+        var clientConn = this.getSocket(this.playerIds[id]);
+        clientConn.send(JSON.stringify(message));
     }
 }
 
@@ -282,7 +298,7 @@ function GameManager(playerInfo, playerIds){
               };
 
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
-        console.log("CALLING FIRE ON " + msg.eventType);
+        iolog("CALLING FIRE ON " + msg.eventType);
         var event = this.events[msg.eventType];
         event.call(this, msg, socket); //call on this roomManager object
     }
@@ -353,15 +369,15 @@ GameManager.prototype.run = function() {
     var that = this;
 
     if (this.gameState == gameStates.ELECT_LEADER){
-        console.log("ELECT_LEADER");
+        iolog("ELECT_LEADER");
         this.timeout = setTimeout(function(){that.chooseLeaderTimeout();}, GameManager.timeouts.ELECT_LEADER*1000);
         return;
     }
 
     if (this.gameState == gameStates.CHOOSE_TOPIC){
-        console.log("CHOOSE_TOPIC");
+        iolog("CHOOSE_TOPIC");
         this.timeout = setTimeout(function(){that.chooseTopicTimeout();}, GameManager.timeouts.CHOOSE_TOPIC*1000);
-        console.log("Setting timeout for topic");
+        iolog("Setting timeout for topic");
         return;
     }
 
@@ -382,7 +398,7 @@ GameManager.prototype.run = function() {
 }
 
 GameManager.prototype.chooseLeaderTimeout = function(){
-    console.log("CHOOSE LEADER");
+    iolog("CHOOSE LEADER");
     var randomIndex;
     this.leaderIndex = (this.leaderIndex+1)%(this.numPlayers);
     var leader = this.playerIds[this.leaderIndex];
@@ -404,7 +420,7 @@ GameManager.prototype.chooseLeaderTimeout = function(){
     notification = JSON.stringify(notification);
 
     for(player in this.playerInfo){
-        console.log(player);
+        iolog(player);
         this.playerInfo[player].getSocket().send(notification);
     }
 
@@ -413,7 +429,7 @@ GameManager.prototype.chooseLeaderTimeout = function(){
 
 GameManager.prototype.chooseTopicTimeout = function(){
     this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
-    console.log("CHOOSE TOPIC OVER");
+    iolog("CHOOSE TOPIC OVER");
     this.setTopic("[No Topic]");
     this.run();
 }
@@ -422,7 +438,7 @@ GameManager.prototype.setTopic = function(topic){
   var notification = new Message.Message();
   notification.messageType = "GameMessage";
   notification.eventType = "topic";
-  console.log("Topic is " + topic);
+  iolog("Topic is " + topic);
   notification.data.topic = topic;
   notification = JSON.stringify(notification);
   for(player in this.playerInfo){
@@ -431,7 +447,7 @@ GameManager.prototype.setTopic = function(topic){
 }
 
 GameManager.prototype.submissionTimeout = function(){
-    console.log("SUBMISSION TIMEOUT");
+    iolog("SUBMISSION TIMEOUT");
     this.gameState = GameManager.gameStates.CHOOSE_WINNER;
     //tell leader to choose a winner
     var notification = new Message.Message();
@@ -460,7 +476,7 @@ GameManager.prototype.submissionTimeout = function(){
 }
 
 GameManager.prototype.winnerTimeout = function(){
-    console.log("CHOOSE WINNER TIMEOUT");
+    iolog("CHOOSE WINNER TIMEOUT");
     this.gameState = GameManager.gameStates.INTERMISSION;
     var notification = new Message.Message();
     notification.messageType = "GameMessage";
@@ -488,7 +504,7 @@ GameManager.prototype.sendScores = function(){
 }
 
 GameManager.prototype.intermissionEnded = function(){
-    console.log("INTERMISSION");
+    iolog("INTERMISSION");
     this.gameState = GameManager.gameStates.ELECT_LEADER;
     this.allSubmissions = {};
     this.submissionsMap = {};
@@ -503,12 +519,12 @@ function attachGameManagerEvents(gameManager){
                  function(data, socket){
 
       if (socket.id != this.leaderId) {
-          console.log("non-leader tried to choose topic");
+          iolog("non-leader tried to choose topic");
           return;
       }
 
       if (this.gameState != GameManager.gameStates.CHOOSE_TOPIC) {
-          console.log("not time to choose topic");
+          iolog("not time to choose topic");
           return;
       }
 
@@ -608,7 +624,7 @@ function ServerManager(port){
     };
 
     this.fire = function(msg, socket) { //need an exception for out of room events like create room
-        console.log("CALLING FIRE ON " + msg.eventType);
+        iolog("CALLING FIRE ON " + msg.eventType);
         var event = serverManager.events[msg.eventType];
         event.call(this, msg, socket); //call on this roomManager object
     }
@@ -638,8 +654,8 @@ function listen(server) {
 ServerManager.prototype.handleMsg = function(msg, socket) {
     if (msg.messageType != "ServerMessage") {
         var roomId = msg.get("roomId")
-        console.log(msg.eventType);
-        console.log(roomId);
+        iolog(msg.eventType);
+        iolog(roomId);
 
         if (!(roomId in this.roomInfo)) {
             var errorMsg = new Message.Message;
@@ -664,69 +680,65 @@ ServerManager.prototype.handleFileReceipt = function(dataPath,
                                                      type)
 {
     if (!roomId in this.roomInfo) {
-        console.log("invalid room " + roomId);
+        iolog("invalid room " + roomId);
         return;
     }
 
     var room = this.roomInfo[roomId];
 
     if (!clientId in room.playerInfo) {
-        console.log("invalid player id " + clientId + " in room " + roomId);
+        iolog("invalid player id " + clientId + " in room " + roomId);
         return;
     }
 
     if (room.gameManager.gameState != GameManager.gameStates.SUBMISSION_PERIOD) {
-        console.log("received submission at invalid time");
+        iolog("received submission at invalid time");
         return;
     }
 
     room.gameManager.allSubmissions[clientId] = {type: type, data: dataPath};
-    console.log(room.gameManager.allSubmissions);
+    iolog(room.gameManager.allSubmissions);
 }
 
 function attachServerManagerEvents(serverManager) {
   var websocket = serverManager.websocket;
 
   websocket.on('connection', function(socket) { //a connection opened so register callbacks for the socket
-    console.log('connect');
-
     socket.id = id();
-    console.log('new socket got id: ' + socket.id);
+    iolog('new client with id ' + socket.id + " connected");
 
     //send id to person
-
     var idMsg = new Message.Message;
     idMsg.messageType = "ServerMessage";
     idMsg.eventType = "givenId";
     idMsg.data.yourId = socket.id;
     socket.send(JSON.stringify(idMsg));
 
+    //send list of rooms to players
     var roomMsg = new Message.Message;
     roomMsg.messageType = "ServerMessage";
     roomMsg.eventType = "roomList";
     roomMsg.data.roomList = serverManager.rooms;
-    var roomMsg = JSON.stringify(roomMsg);
-    socket.send(roomMsg);
+    socket.send(JSON.stringify(roomMsg));
 
+    //add socket to list of sockets
     serverManager.sockets.push(socket);
 
+    //set up event handler for messages from client
     socket.on('message', function(msg) {
       var data = JSON.parse(msg);
-      console.log(data);
       var decodedMsg = new Message.Message(data);
-      console.log(decodedMsg.eventType);
+      iolog("received " + decodedMsg.eventType + " message from " + socket.id.toString());
       serverManager.handleMsg(decodedMsg, socket);
     });
 
     socket.on('close', function() {
-      console.log('closed socket');
-      iolog('closed socket');
+      iolog('client with socket id ' + socket.id.toString() + " disconnected");
 
       // find socket to remove
       var i = serverManager.sockets.indexOf(socket);
       // remove socket
       serverManager.sockets.splice(i, 1);
-
       // remove from rooms and send remove_peer_connected to all sockets in room
       var room;
       for (var i in serverManager.roomInfo) { //TODO: this doesn't need a loop
@@ -749,7 +761,7 @@ function attachServerManagerEvents(serverManager) {
     //gameManager.fire('connect', rtc);
 
   serverManager.on('createRoom', function(data, socket){
-    console.log("create_room");
+    iolog("create_room");
     var roomId = data.get("roomId");
     //check if room already exists
     if (roomId in this.roomInfo) {
@@ -820,7 +832,6 @@ function S4() {
 
 // make a REALLY COMPLICATED AND RANDOM id, kudos to dennis
 function id() {
-  console.log("making id");
   return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
 }
 
@@ -841,17 +852,17 @@ var express = require('express');
 var app = express();
 var multiparty = require("connect-multiparty");
 
-console.log("STARTING STREAMING SERVER ON PORT " + ssConstants.port.toString());
+iolog("STARTING STREAMING SERVER ON PORT " + ssConstants.port.toString());
 app.listen(ssConstants.port);
 
 app.use(multiparty({uploadDir:ssConstants.upload_path}));
 
 if (!fs.existsSync(ssConstants.tmp_path)) {
-    console.log("Tmp dir doesn't exist. Creating.");
+    iolog("Tmp dir doesn't exist. Creating.");
     fs.mkdirSync(ssConstants.tmp_path,0744);
 }
 if (!fs.existsSync(ssConstants.upload_path)) {
-    console.log("Uploads dir doesn't exist. Creating.");
+    iolog("Uploads dir doesn't exist. Creating.");
     fs.mkdirSync(ssConstants.upload_path,0744);
 }
 
@@ -865,13 +876,13 @@ function uploadHandler(req,res)
         var tmp_file_path = req.files.submissionFile.path;
         // set where the file should actually exist
         var target_file_path = ssConstants.upload_path+'/'+req.files.submissionFile.name;
-        console.log("downloaded " + target_file_path);
+        iolog("downloaded " + target_file_path);
         // move the file from the temporary location to the intended location
         fs.rename(tmp_file_path, target_file_path);
 
         // Notify game that upload received and completed
-        console.log(req.body.id);
-        console.log(req.body.roomId);
+        iolog(req.body.id);
+        iolog(req.body.roomId);
         serverManager.handleFileReceipt(target_file_path,
                                         req.body.id,
                                         req.body.roomId,
