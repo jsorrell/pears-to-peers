@@ -11,6 +11,7 @@ $(document).ready(function() {
 
     $('#submit-file-button').prop({disabled: true});
     $('#winner-button').prop({disabled: true});
+    $('#view-submission-button').prop({disabled: true});
 
     $("form").submit(function (e){
         e.preventDefault();
@@ -111,19 +112,13 @@ function gamePageCb(eventName) {
             fillRoomList();
             break;
         case "chooseWinner":
-            if (client.isLeader) {
-                viewState("select-winner");
-                displayMessage("Choose the winner", "room-info", "bad");
-            } else {
-                viewState("view-submissions");
-                displayMessage("View others' submissions", "room-info");
-            }
 
             console.log("submissions2:");
             console.log(client.submissions);
             var submissionList = document.getElementById("submission-list");
             submissionList.options.length = 0;
             $('#winner-button').prop({disabled: true});
+            $('#view-submission-button').prop({disabled: true});
             for (var submissionId in client.submissions) {
                 var el = document.createElement("option");
                 var submission = client.submissions[submissionId];
@@ -136,6 +131,7 @@ function gamePageCb(eventName) {
             }
             if (submissionList.options.length != 0) {
                 $('#winner-button').prop({disabled: false});
+                $('#view-submission-button').prop({disabled: false});
             }
             break;
 
@@ -149,38 +145,53 @@ function gamePageCb(eventName) {
             });
             break;
 
-        case "roomCreated":
-            break;
-
         case "joinedRoom":
             displayMessage("You have joined room " + client.currentRoomId, "room-info", "good");
             viewState("in-room");
             break;
 
-        case "noWinnerChosen":
         case "startGame":
-            displayMessage("The game has started. Choosing leader.", "room-info", "good");
+            console.log("displayMessage ing");
+            displayMessage("The game has started", "room-info", "good");
             break;
 
-        case "leaderChosen":
-            if (client.isLeader) {
-                viewState("submitting-topic");
-                displayMessage("Submit a topic", "room-info", "bad")
-            } else {
-                viewState("waiting");
-                displayMessage("Please wait for topic to be submitted by leader("+client.leaderId+")", "room-info")
+        case "state":
+            switch(client.state) {
+                case "chooseTopic":
+                    if (client.isLeader) {
+                        viewState("submitting-topic");
+                        displayMessage("Submit a topic", "room-info", "bad")
+                    } else {
+                        viewState("waiting");
+                        displayMessage("Please wait for topic to be submitted by leader("+client.leaderId+")", "room-info");
+                    }
+                    break;
+
+                case "submissionPeriod":
+                    if (client.isLeader) {
+                        viewState("waiting");
+                        displayMessage("Waiting for content to be submitted", "room-info")
+                    } else {
+                        viewState("submitting-content");
+                        displayMessage("Please submit content for topic \"" + client.topic + "\"!", "room-info", "good")
+                    }
+                    break;
+
+                case "chooseWinner":
+                    if (client.isLeader) {
+                        viewState("select-winner");
+                        displayMessage("Choose the winner", "room-info", "bad");
+                    } else {
+                        viewState("view-submissions");
+                        displayMessage("View others' submissions", "room-info");
+                    }
+                    break;
+
             }
             break;
 
         case "topic":
             displayMessage("The topic is " + client.topic, "room-info");
-            if (client.isLeader) {
-                viewState("waiting");
-                displayMessage("Waiting for content to be submitted", "room-info")
-            } else {
-                viewState("submitting-content");
-                displayMessage("Please submit content for topic \"" + client.topic + "\"!", "room-info", "good")
-            }
             break;
         case "connectedToServer":
             displayMessage("Connected to server", "connection-info", "good");
