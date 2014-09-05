@@ -114,8 +114,6 @@ Client.prototype.onmessage = function(rawMsg){
 
         case "startGame":
             console.log("GAME STARTED");
-            this.leaderId = msg.get("leader");
-            this.isLeader = (this.leaderId === this.myID);
             this.pageCallback(eventType);
             break;
 
@@ -130,7 +128,13 @@ Client.prototype.onmessage = function(rawMsg){
             console.log("the topic is " + this.topic);
             this.pageCallback(eventType);
             break;
-        
+            
+        case "leaderChosen":
+             this.isLeader = (msg.get("leader") === this.myID);
+             this.leaderId = msg.get("leader");
+             this.pageCallback(eventType);
+             break;
+             
         case "stopGame":
             this.scores = {};
             this.submissions = {};
@@ -156,7 +160,7 @@ Client.prototype.setRooms = function(rooms){
 }
 
 Client.prototype.createRoom = function(roomId){
-    request = new Message("ServerMessage","createRoom",{roomId: roomId});
+    request = new Message("ServerMessage","createRoom", {roomId: roomId});
     this.serverConn.send(JSON.stringify(request));
 }
 

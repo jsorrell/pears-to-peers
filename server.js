@@ -119,24 +119,20 @@ function RoomManager(roomId) {
             return false;
         }
         console.log("deleting player "+ playerId.toString());
-
+        
+        if(this.playerInfo[playerId].started) {
+            this.numStarted--;
+        }
+        
         delete this.playerInfo[playerId];
         delete this.scores[playerId];
         //find and remove
         this.playerIds.splice(this.playerIds.indexOf(playerId), 1);
         this.numPlayers--;
-
+        
         if(this.gameStarted) {
            this.gameManager.deletePlayer(playerId);
         }
-        
-        else if(this.playerInfo[playerId].started) {
-            this.numStarted--;
-        }
-          
-        if (this.numPlayers < consts.minPlayers) {
-            this.stopGame();
-        } 
         
         var playerIds = this.playerIds;
         var response = new Message.Message;
@@ -150,6 +146,8 @@ function RoomManager(roomId) {
 
 
    this.stopGame = function(){
+       console.log("STOPPING GAME\n");
+       console.log(this.gameStarted);
        if (!this.gameStarted) {
            return;
        }
@@ -165,7 +163,6 @@ function RoomManager(roomId) {
        stopGameMsg.messageType = "RoomMessage";
        stopGameMsg.eventType = "stopGame";
        stopGameMsg.data.details = "Insufficient players to continue";
-       stopGameMsg = JSON.stringify(stopGameMsg);
        this.broadcast(stopGameMsg);
    }
    
@@ -261,11 +258,10 @@ RoomManager.prototype.startNewGame = function()
                                                 new Message.Message("RoomMessage","scores", {scores: that.scores});
                                             that.broadcast(scoreMessage);
                                        },
-                                       this.stopGame);
+                                       function(){that.stopGame()});
 
     //var response = new Message.Message("RoomMessage","startGame",{leader:leader});
     attachGameManagerEvents(this.gameManager);
-    this.broadcast(response);
     this.gameManager.run();
 }
 
@@ -282,6 +278,7 @@ RoomManager.prototype.handleMsg = function(msg, socket) {
 
 RoomManager.prototype.broadcast = function(message,except)
 {
+    console.log("BROADCASTING " + message.eventType);
     stringifiedMsg = JSON.stringify(message)
     for(var id in this.playerIds){
         if (except && except.indexOf(id) > -1) continue;
@@ -360,6 +357,7 @@ GameManager.stateToString = function(state)
 }
 
 GameManager.timeouts = {
+    ELECT_LEADER : 1,
     CHOOSE_TOPIC : 20,
     SUBMISSION_PERIOD : 12,
     CHOOSE_WINNER : 20,
@@ -370,12 +368,12 @@ GameManager.prototype.endRound = function(winner)
     clearTimeout(this.timeout);
     this.allSubmissions = {};
     this.submissionsMap = {};
-    this.run(GameManager.gameStates.ELECT_LEADER);
-    this.endRoundCallback(winner);
+    this.gameState = GameManager.gameStates.ELECT_LEADER;
+    this.endRoundCallBack(winner);
+    this.run();
 }
 
 GameManager.prototype.stop = function(){
-     console.log("STOPPING GAMEMANAGER\n");
      clearTimeout(this.timeout);
      this.gameState = GameManager.gameStates.ELECT_LEADER;
 }
@@ -393,12 +391,13 @@ GameManager.prototype.broadcast = function(message,except)
 GameManager.prototype.deletePlayer = function(playerId) {
     delete this.playerIds[playerId];
     delete this.playerInfo[playerId];
-    delete this.allsubmissions[playerId];
+    delete this.allSubmissions[playerId];
     
     this.numPlayers--;
     
     if (this.numPlayers < consts.minPlayers) {
         this.stopGameCallBack();
+        this.stop();
     }
     
     if (this.leaderId === playerId) {
@@ -407,7 +406,7 @@ GameManager.prototype.deletePlayer = function(playerId) {
         return;
     }
     
-    //if choosing winner, notify to not choose gone person
+    //if choosing winner, notify to not choose disconnected person
     if (this.gameState === GameManager.gameStates.CHOOSE_WINNER){
         var notification = new Message.Message("GameMessage","chooseWinner");
         var submissions = {};
@@ -460,11 +459,11 @@ GameManager.prototype.chooseLeaderTimeout = function(){
     this.leaderIndex = (this.leaderIndex+1)%(this.numPlayers);
     var leader = this.playerIds[this.leaderIndex];
     this.leaderId = leader;
+    var notification = new Message.Message();
     notification.eventType = "leaderChosen";
     notification.messageType = "GameMessage";
     notification.data.leader = leader;
     this.gameState = GameManager.gameStates.CHOOSE_TOPIC;
-    notification = JSON.stringify(notification);
     this.broadcast(notification);
     this.run();
 }
@@ -535,7 +534,8 @@ function attachGameManagerEvents(gameManager){
 
       clearTimeout(this.timeout);
       this.setTopic(data.get("topic"));
-      this.next();
+      this.gameState = GameManager.gameStates.SUBMISSION_PERIOD;
+      this.run();
   });
 
   //SUBMISSION PERIOD
@@ -578,7 +578,7 @@ function attachGameManagerEvents(gameManager){
         winnerChosenMessage.data.winner = winner;
         this.broadcast(winnerChosenMessage);
 
-        this.endGame(winner);
+        this.endRound(winner);
     });
 }
 
@@ -753,7 +753,7 @@ function attachServerManagerEvents(serverManager) {
         //set up event handler for messages from client
         socket.on('message', function(msg) {
             var data = JSON.parse(msg);
-            var decodedMsg = new Message.Message(data);
+            var decodedMsg = Message.Message.copyMessage(data);
             iolog("received " + decodedMsg.eventType + " message from " + socket.id.toString());
             serverManager.handleMsg(decodedMsg, socket);
         });
@@ -795,13 +795,6 @@ function attachServerManagerEvents(serverManager) {
         response.data.roomId = roomId;
 
         socket.send(JSON.stringify(response));
-
-        /* send join confirmation */
-        var joinConfirm = new Message.Message;
-        joinConfirm.messageType = "RoomMessage";
-        joinConfirm.eventType = "joinedRoom";
-        joinConfirm.data.roomId = roomId;
-        socket.send(JSON.stringify(joinConfirm));
 
         //tell everyone about the new room
         var response = new Message.Message();
