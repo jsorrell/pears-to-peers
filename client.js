@@ -197,7 +197,7 @@ Client.prototype.sendTopic = function(topic) {
     this.serverConn.send(JSON.stringify(request));
 }
 
-Client.prototype.sendTopic = function(username) {
+Client.prototype.sendUsername = function(username) {
     var request = new Message();
     request.messageType = "ServerMessage";
     request.eventType = "username";

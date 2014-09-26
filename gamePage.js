@@ -90,6 +90,13 @@ Your browser does not support the audio element.\
         var winner = parseInt($('#submission-list').val());
         client.sendWinner(winner);
     });
+
+    $('#choose-username-form').submit(function (event)
+    {
+        var username = $("#choose-username-input").val();
+        console.log("sending username " + username);
+        client.sendUsername(username);
+    });
 });
 
 function gamePageCb(eventName) {
