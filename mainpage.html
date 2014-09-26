@@ -14,6 +14,11 @@
     <h1>Pears to Peers</h1>
     <p class="message-box" id="room-info"></p>
 
+    <form class="choose-username" id="choose-username-form" style="display: inline;">
+        <input type="text" id="choose-username-input" />
+        <input id="choose-username-button" type="submit" value="Choose Username" />
+    </form>
+
     <div class="join-room in-room" id="room-selection">
         <h4>Available Rooms:</h4>
         <select id="room-list"></select>
@@ -21,14 +26,14 @@
     </div>
 
     <h4>Create a Room:</h4>
-    <form class="join-room in-room" id="room-creation-form" action="http://google.com" style="display: inline;">
+    <form class="join-room in-room" id="room-creation-form" style="display: inline;">
         <input type="text" id="room-name-input" />
         <input id="create-room-button" type="submit" value="Create Room" />
     </form>
 
     <button class="in-room" id="start-game-button" style="display: block"; type="button" onclick="startGameOnClick();">Start Game</button>
     <table class="in-room submitting-topic submitting-content view-submissions select-winner waiting"id="score-table">
-        <tr id="score-table-ids"> </tr>
+        <tr id="score-table-names"> </tr>
         <tr id="score-table-scores"> </tr>
     </table>
 

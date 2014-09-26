@@ -8,16 +8,17 @@ function Client(pageCallback) {
     this.scores = {};
     this.rooms = [];
     this.submissions = {};
-    this.myID = "";
+    this.myUsername = "";
     this.currentRoomId = null;
     this.serverConn;
     this.pageCallback = pageCallback;
     this.topic = "";
     this.isLeader = false;
-    this.leaderId = "";
+    this.leaderUsername = "";
     this.fileUploadProgress = 0;
     this.state = "";
     this.roundWinner = "";
+
 
     this.onopen = function(evt) {
         console.log("WebSocket open");
@@ -32,6 +33,7 @@ function Client(pageCallback) {
         this.pageCallback("serverConnectionClosed");
     }
 
+    this.connect("ws://" + window.location.hostname + ":8080");
 };
 
 Client.prototype.connect = function(addr){
@@ -61,12 +63,6 @@ Client.prototype.onmessage = function(rawMsg){
             console.log("submissions: ");
             console.log(this.submissions);
             this.pageCallback(eventType);
-            break;
-
-        case "givenId":
-            this.myID = msg.get("yourId");
-            this.pageCallback(eventType);
-            console.log("My ID is " + this.myID);
             break;
 
         case "peerList":
@@ -131,8 +127,8 @@ Client.prototype.onmessage = function(rawMsg){
             break;
 
         case "leaderChosen":
-             this.isLeader = (msg.get("leader") === this.myID);
-             this.leaderId = msg.get("leader");
+             this.isLeader = (msg.get("leader") === this.myUsername);
+             this.leaderUsername = msg.get("leader");
              this.pageCallback(eventType);
              break;
 
@@ -141,13 +137,16 @@ Client.prototype.onmessage = function(rawMsg){
             this.submissions = {};
             this.topic = "";
             this.isLeader = false;
-            this.leaderId = "";
+            this.leaderUsername = "";
             this.pageCallback(eventType);
             break;
 
         case "winnerChosen":
-            console.log("winnerChosen");
             this.roundWinner = msg.get("winner");
+            this.pageCallback(eventType);
+            break;
+        case "usernameSuccess":
+            this.myUsername = msg.get("username");
             this.pageCallback(eventType);
             break;
 
@@ -198,6 +197,14 @@ Client.prototype.sendTopic = function(topic) {
     this.serverConn.send(JSON.stringify(request));
 }
 
+Client.prototype.sendTopic = function(username) {
+    var request = new Message();
+    request.messageType = "ServerMessage";
+    request.eventType = "username";
+    request.data.username = username;
+    this.serverConn.send(JSON.stringify(request));
+}
+
 /* entry:
 {
     type: "text" or "file",
@@ -218,7 +225,7 @@ Client.prototype.sendEntry = function(entry) {
         var fileData = new FormData();
         console.log(entry);
         fileData.append('submissionFile', entry.data);
-        fileData.append('id', this.myID);
+        fileData.append('id', this.myUsername);
         fileData.append('roomId', this.currentRoomId);
 
         $.ajax({

@@ -1,32 +1,30 @@
-var client = new Client(gamePageCb);
+var client;
 var file;
 
 
 $(document).ready(function() {
-    displayMessage("Connecting to Server", "connection-info");
-    displayMessage("Please wait for Connection", "room-info", "bad");
-    viewState("disconnected");
-
-    client.connect("ws://" + window.location.hostname + ":8080");
-
     $('#submit-file-button').prop({disabled: true});
     $('#winner-button').prop({disabled: true});
     $('#view-submission-button').prop({disabled: true});
-
     $("form").submit(function (e){
         e.preventDefault();
     });
+    displayMessage("Connecting to Server", "connection-info");
+    displayMessage("Please wait for Connection", "room-info", "bad");
+    viewState("disconnected");
+    client = new Client(gamePageCb);
+
 
     $("#file-submission-input").on('change', function (event)
     {
-      var files = event.target.files;
-      if (files.length === 0){
+        var files = event.target.files;
+        if (files.length === 0){
         $('#submit-file-button').prop({disabled: true});
-      } else {
+        } else {
         console.log("a");
         file = $('#file-submission-input')[0].files[0];
         $('#submit-file-button').prop({disabled: false});
-      }
+        }
     });
 
     $("#file-submit-form").on('submit', function (event)
@@ -59,32 +57,31 @@ $(document).ready(function() {
     {
         var submissionId = $('#submission-list').val();
         var submission = client.submissions[submissionId];
-        console.log("trfewfewwe");
         console.log(submission);
 
         var genType = submission.type.split('/')[0];
         switch (genType) {
             case 'text':
                 $('#submission-view-area').html(submission.data);
-            break;
+                break;
 
             case 'video':
                 $('#submission-view-area').html('<video width="320" height="240" controls>\
 <source src="'+submission.data+'" type="'+submission.type+'">\
 Your browser does not support the video tag.\
 </video>');
-            break;
+                break;
 
             case 'image':
                 $('#submission-view-area').html('<img width="320" height="240" src="'+ submission.data + '" />');
-            break;
+                break;
 
             case 'audio':
                 $('#submission-view-area').html('<audio controls>\
 <source src="'+ submission.data+'" type="'+submission.type+'" />\
 Your browser does not support the audio element.\
 </audio>');
-            break;
+                break;
         }
     });
 
@@ -101,9 +98,9 @@ function gamePageCb(eventName) {
             console.log("emptying view area");
             $('#submission-view-area').empty();
             break;
+
         case "roomList":
             if (client.currentRoomId == null) {
-                console.log(client.currentRoomId);
                 if (client.rooms.length === 0) {
                     displayMessage("Please create a room", "room-info");
                 } else {
@@ -112,36 +109,17 @@ function gamePageCb(eventName) {
             }
             fillRoomList();
             break;
+
         case "chooseWinner":
 
-            console.log("submissions2:");
-            console.log(client.submissions);
-            var submissionList = document.getElementById("submission-list");
-            submissionList.options.length = 0;
-            $('#winner-button').prop({disabled: true});
-            $('#view-submission-button').prop({disabled: true});
-            for (var submissionId in client.submissions) {
-                var el = document.createElement("option");
-                var submission = client.submissions[submissionId];
-                console.log(submission);
-                el.textContent = submission.data.slice(submission.data.lastIndexOf("/")+1);
-                console.log("submission3:");
-                console.log(client.submissions[submissionId]);
-                el.value = submissionId;
-                submissionList.appendChild(el);
-            }
-            if (submissionList.options.length != 0) {
-                $('#winner-button').prop({disabled: false});
-                $('#view-submission-button').prop({disabled: false});
-            }
             break;
 
         case "peerList":
         case "scores":
-            $("#score-table-ids").html("");
+            $("#score-table-names").html("");
             $("#score-table-scores").html("");
             $.each(client.scores,function (client,score) {
-                $("#score-table-ids").append("<td>"+client+"</td>");
+                $("#score-table-names").append("<td>"+client+"</td>");
                 $("#score-table-scores").append("<td>"+score+"</td>");
             });
             break;
@@ -196,9 +174,12 @@ function gamePageCb(eventName) {
             break;
         case "connectedToServer":
             displayMessage("Connected to server", "connection-info", "good");
-            console.log(client.rooms);
+            viewState("choose-username");
+            break;
+        case "usernameSuccess":
             displayMessage("Please create a room", "room-info");
             viewState("join-room");
+
             break;
         case "serverConnectionClosed":
             displayMessage("Connection to server closed", "connection-info", "bad");
@@ -256,8 +237,38 @@ function displayMessage(message,id,status){
     $("#" + id).css("background-color",color);
 }
 
+var curState;
+function setState(state)
+{
+    if (state == curState) return;
+    switch(state) {
+        case 'choose-username':
+        break;
+        case 'join-room':
+        break;
+        case 'in-room':
+        break;
+        case 'submitting-topic':
+        break;
+        case 'waiting-on-topic':
+        break;
+        case 'submitting-content':
+        break;
+        case 'waiting-on-content':
+        break;
+        case 'choosing-winner':
+        break;
+        case 'waiting-on-winner':
+        break;
+        case 'connecting':
+        case 'disconnected':
+        break;
+    }
+    curState = state;
+}
 /* show the parts of the page for the gamestate */
-function viewState(state){
+function viewState(state)
+{
     console.log("viewing " + state);
     $(".message-box").show();
     $("." + state).show();
