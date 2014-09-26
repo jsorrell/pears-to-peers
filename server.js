@@ -126,7 +126,7 @@ function RoomManager(roomId) {
         
         delete this.playerInfo[playerId];
         delete this.scores[playerId];
-        //find and remove
+        //find and remove from playerIds
         this.playerIds.splice(this.playerIds.indexOf(playerId), 1);
         this.numPlayers--;
         
@@ -491,6 +491,7 @@ GameManager.prototype.submissionTimeout = function(){
 
     //build submissionsMap and submissions
     var i = 0;
+    
     for (var player in this.allSubmissions) {
         submissions[i] = this.allSubmissions[player];
         this.submissionsMap[i] = player;
@@ -550,7 +551,7 @@ function attachGameManagerEvents(gameManager){
             iolog(username + " tried to submit outside of submission period");
             return;
         }
-
+        
         this.allSubmissions[username] =
                                    {type: "text", data: data.get("submission")};
     });
@@ -605,7 +606,7 @@ function ServerManager(port){
     //by server
 
     //Map from sockets to usernames
-    this.socketToUsername = [];
+    this.socketToUsername = {};
     
     //Map from playerId to player objects
     this.players = {};
@@ -655,13 +656,13 @@ function listen(server) {
 }
 
 ServerManager.prototype.handleMsg = function(msg, socket) {
-    if (!socket.id in ServerManager.socketToUsername 
-        || !ServerManager.socketToUsername[socket.id] in ServerManager.players){
+    if (!(socket.id in this.socketToUsername) 
+        && !(this.socketToUsername[socket.id] in this.players)){
         return;
     }
     
     if (msg.messageType != "ServerMessage") {
-        var roomId = msg.get("roomId")
+        var roomId = msg.get("roomId");
         iolog(msg.eventType);
         iolog(roomId);
 
@@ -711,6 +712,10 @@ ServerManager.prototype.handleFileReceipt = function(dataPath,
 }
 
 ServerManager.prototype.deletePlayer = function(playerId){
+    //delete the player from both maps
+    delete serverManager.players[playerId];
+    delete serverManager.socketToUsername[playerId];
+    
     // remove from rooms and send remove_peer_connected to all sockets in room
     for (var i in this.roomInfo) { //TODO: this doesn't need a loop
         room = this.roomInfo[i];
@@ -742,11 +747,28 @@ ServerManager.prototype.broadcast = function(message,except)
     }
 }
 
+ServerManager.prototype.checkValidUsername = function(username) {
+    if (username in this.players) {
+        return "Username already exists!";
+    }
+    
+    return "";
+}
+
+ServerManager.prototype.getSocket = function(id) {
+    if (!id in this.players) {
+        return null;    
+    }
+
+    return this.players[id].socket;
+}
+
 function attachServerManagerEvents(serverManager) {
     var websocket = serverManager.websocket;
 
     websocket.on('connection', function(socket) { //a connection opened so register callbacks for the socket
         //give socket an id
+        socket.id = id();
         while (socket.id in serverManager.socketToUsername) {
             socket.id = id();
         }
@@ -758,27 +780,22 @@ function attachServerManagerEvents(serverManager) {
         socket.on('message', function(msg) {
             var data = JSON.parse(msg);
             var decodedMsg = Message.Message.copyMessage(data);
-            iolog("received " + decodedMsg.eventType + " message from " + socket.id.toString());
             serverManager.handleMsg(decodedMsg, socket);
         });
 
         socket.on('close', function() {
-            var username = serverManager.socketToUsername(socket.id);
-            iolog('client with socket id ' + username + " disconnected");
+            var username = serverManager.socketToUsername[socket.id];
+            iolog('client with socket id ' + socket.id + " disconnected");
             
-            //delete the player from both maps
-            delete serverManager.players.username;
-            delete serverManager.socketToUsername.username;
-            
-            //delete the player from all rooms
+            //cleanup after this player
             serverManager.deletePlayer(username);
         });
     });
 
     serverManager.on('username', function(data, socket) {
         var username = data.get("username");
-        var error = serverManager.checkValidUsername(username);
-        if (!error) {
+        var error = this.checkValidUsername(username);
+        if (error != "") {
             var errorMsg = new Message.Message;
             errorMsg.messageType = "ServerMessage";
             errorMsg.eventType = "Error";
@@ -848,28 +865,9 @@ function attachServerManagerEvents(serverManager) {
         response.messageType = "ServerMessage";
         response.eventType = "roomList";
         response.data.roomList = this.rooms;
-        var finalresponse = JSON.stringify(response);
 
-        for (var player in this.sockets) {
-            this.sockets[player].send(finalresponse);
-        }
+        this.broadcast(response);
     });
-}
-
-ServerManager.getSocket = function(id) {
-    if (!id in this.players) {
-        return null;    
-    }
-
-    return this.players[id].socket;
-}
-
-ServerManager.checkValidUsername = function(username) {
-    if (username in this.players) {
-        return "Username already exists!";
-    }
-    
-    return "";
 }
 
 // generate a 4 digit hex code randomly
