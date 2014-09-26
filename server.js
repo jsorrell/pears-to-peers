@@ -92,7 +92,7 @@ function RoomManager(roomId) {
             iolog("tried to add player "+playerId.toString()+" to started room "+this.roomId.toString());
         }
 
-        iolog("Player " + socket.id.toString() + " joined room " + roomId);
+        iolog("Player " + playerId + " joined room " + roomId);
 
         this.playerInfo[playerId] = new Player(playerId, socket);
         this.playerIds.push(playerId);
@@ -183,7 +183,7 @@ function RoomManager(roomId) {
 function attachRoomManagerEvents(roomManager) {
     roomManager.on('joinRoom', function(data, socket) {
         var roomId = data.get("roomId");
-
+        var username = data.get("username");
         //make sure game has not already started
         if(this.gameStarted){
             var response = new Message.Message("RoomMessage","Error");
@@ -193,7 +193,7 @@ function attachRoomManagerEvents(roomManager) {
         }
 
         //make sure the player is not already in the room
-        if(socket.id in this.playerInfo){
+        if(username in this.playerInfo){
             var response = new Message.Message("RoomMessage","Error");
             response.data.details = "Player already in room!";
             socket.send(JSON.stringify(response));
@@ -201,13 +201,13 @@ function attachRoomManagerEvents(roomManager) {
         }
 
         //add the player to the room
-        this.addPlayer(socket.id, socket);
+        this.addPlayer(username, socket);
     })
 
     roomManager.on('startGame', function(data, socket){
         iolog('New game started in room ' + this.roomId);
 
-        var playerId = socket.id;
+        var playerId = data.get("username");
 
         if(!this.playerInfo[playerId].started) {
             this.playerInfo[playerId].started = true; //TODO: put this in StartPlayer() call returning true when game started
@@ -522,7 +522,8 @@ function attachGameManagerEvents(gameManager){
   gameManager.on('topicChosen',
                  function(data, socket){
 
-      if (socket.id != this.leaderId) {
+      var username = data.get("username");
+      if (username != this.leaderId) {
           iolog("non-leader tried to choose topic");
           return;
       }
@@ -538,29 +539,33 @@ function attachGameManagerEvents(gameManager){
       this.run();
   });
 
-  //SUBMISSION PERIOD
-  gameManager.on("submission",
-                 function(data, socket){
+    //SUBMISSION PERIOD
+    gameManager.on("submission",
+                 function(data, socket)
+    {
+        var username = data.get("username");     
         //received text submission
         //maybe do some logging here
         if (this.gameState != GameManager.gameStates.SUBMISSION_PERIOD) {
-            iolog(socket.id.toString() + " tried to submit outside of submission period");
+            iolog(username + " tried to submit outside of submission period");
             return;
         }
 
-        this.allSubmissions[socket.id] =
+        this.allSubmissions[username] =
                                    {type: "text", data: data.get("submission")};
     });
 
     //CHOOSE WINNER
     gameManager.on("winnerChosen",
-                    function(data, socket){
-
+                    function(data, socket)
+    {
+        var username = data.get("username"); 
+        
         if (this.gameState != GameManager.gameStates.CHOOSE_WINNER) {
-            iolog(socket.id.toString() + " tried to select winner at wrong time");
+            iolog( + " tried to select winner at wrong time");
             return;
         }
-        if (socket.id != this.leaderId){
+        if (username != this.leaderId){
             iolog("non-leader tried to choose winner");
             return;
         }
@@ -599,9 +604,12 @@ function ServerManager(port){
     //TODO: Route all Messages to RoomManagers, other events are taken care of
     //by server
 
-    //Array to store connections
-    this.sockets = [];
-
+    //Map from sockets to usernames
+    this.socketToUsername = [];
+    
+    //Map from playerId to player objects
+    this.players = {};
+    
     //A map of roomId -> roomManager objects holding information about all the
     //game rooms that the server is managing
     this.roomInfo = {};
@@ -647,6 +655,11 @@ function listen(server) {
 }
 
 ServerManager.prototype.handleMsg = function(msg, socket) {
+    if (!socket.id in ServerManager.socketToUsername 
+        || !ServerManager.socketToUsername[socket.id] in ServerManager.players){
+        return;
+    }
+    
     if (msg.messageType != "ServerMessage") {
         var roomId = msg.get("roomId")
         iolog(msg.eventType);
@@ -662,6 +675,8 @@ ServerManager.prototype.handleMsg = function(msg, socket) {
             return;
         }
 
+        //add username for this socket
+        msg.data.username = this.socketToUsername[socket.id];
         this.roomInfo[roomId].handleMsg(msg, socket);
         return;
     }
@@ -720,9 +735,10 @@ ServerManager.prototype.deletePlayer = function(playerId){
 
 ServerManager.prototype.broadcast = function(message,except)
 {
-    for (var player in this.sockets) {
+    var stringifiedMsg = JSON.stringify(message)
+    for (var player in this.players) {
         if (except && except.indexOf(id) > -1) continue;
-        this.sockets[player].send(JSON.stringify(message));
+        this.players[player].socket.send(stringifiedMsg);
     }
 }
 
@@ -730,25 +746,13 @@ function attachServerManagerEvents(serverManager) {
     var websocket = serverManager.websocket;
 
     websocket.on('connection', function(socket) { //a connection opened so register callbacks for the socket
-        socket.id = id();
-        iolog('new client with id ' + socket.id + " connected");
-
-        //send id to person
-        var idMsg = new Message.Message;
-        idMsg.messageType = "ServerMessage";
-        idMsg.eventType = "givenId";
-        idMsg.data.yourId = socket.id;
-        socket.send(JSON.stringify(idMsg));
-
-        //send list of rooms to players
-        var roomMsg = new Message.Message;
-        roomMsg.messageType = "ServerMessage";
-        roomMsg.eventType = "roomList";
-        roomMsg.data.roomList = serverManager.rooms;
-        socket.send(JSON.stringify(roomMsg));
-
+        //give socket an id
+        while (socket.id in serverManager.socketToUsername) {
+            socket.id = id();
+        }
+        
         //add socket to list of sockets
-        serverManager.sockets.push(socket);
+        serverManager.socketToUsername[socket.id] = "";
 
         //set up event handler for messages from client
         socket.on('message', function(msg) {
@@ -759,16 +763,57 @@ function attachServerManagerEvents(serverManager) {
         });
 
         socket.on('close', function() {
-            iolog('client with socket id ' + socket.id.toString() + " disconnected");
-            // find socket to remove
-            var i = serverManager.sockets.indexOf(socket);
-            // remove socket
-            serverManager.sockets.splice(i, 1);
-            serverManager.deletePlayer(socket.id);
+            var username = serverManager.socketToUsername(socket.id);
+            iolog('client with socket id ' + username + " disconnected");
+            
+            //delete the player from both maps
+            delete serverManager.players.username;
+            delete serverManager.socketToUsername.username;
+            
+            //delete the player from all rooms
+            serverManager.deletePlayer(username);
         });
     });
 
-    serverManager.on('createRoom', function(data, socket){
+    serverManager.on('username', function(data, socket) {
+        var username = data.get("username");
+        var error = serverManager.checkValidUsername(username);
+        if (!error) {
+            var errorMsg = new Message.Message;
+            errorMsg.messageType = "ServerMessage";
+            errorMsg.eventType = "Error";
+            errorMsg.data.details = error;
+            socket.send(JSON.stringify(errorMsg));
+            return;
+        }
+        
+        //make new Player
+        var newPlayer = new Player(username, socket);
+        
+        iolog('new client with id ' + username + " connected");
+
+        //add player to playerlist
+        this.players[username] = newPlayer;
+        
+        //add username to socketToPlayer map
+        this.socketToUsername[socket.id] = username;
+        
+        //send approval of username msg
+        successMsg = new Message.Message;
+        successMsg.messageType = "ServerMessage";
+        successMsg.eventType = "usernameSuccess";
+        successMsg.data.username = username;
+        socket.send(JSON.stringify(successMsg));
+        
+        //send list of rooms to players
+        var roomMsg = new Message.Message;
+        roomMsg.messageType = "ServerMessage";
+        roomMsg.eventType = "roomList";
+        roomMsg.data.roomList = serverManager.rooms;
+        socket.send(JSON.stringify(roomMsg));
+    });
+    
+    serverManager.on('createRoom', function(data, socket){        
         iolog("create_room");
         var roomId = data.get("roomId");
         //check if room already exists
@@ -785,7 +830,7 @@ function attachServerManagerEvents(serverManager) {
         attachRoomManagerEvents(newRoom);
 
         //add creator to room
-        newRoom.addPlayer(socket.id, socket);
+        newRoom.addPlayer(serverManager.socketToUsername[socket.id], socket);
         this.roomInfo[roomId] = newRoom;
         this.rooms.push(roomId);
 
@@ -812,18 +857,19 @@ function attachServerManagerEvents(serverManager) {
 }
 
 ServerManager.getSocket = function(id) {
-    var connections = gameManager.sockets;
-    if (!connections) {
-        iolog("couldn't find socket id " + id)
-        // TODO: Or error, or customize
-        return;
+    if (!id in this.players) {
+        return null;    
     }
 
-    for (var socket in connections) {
-        if (id === socket.id) {
-            return socket;
-        }
+    return this.players[id].socket;
+}
+
+ServerManager.checkValidUsername = function(username) {
+    if (username in this.players) {
+        return "Username already exists!";
     }
+    
+    return "";
 }
 
 // generate a 4 digit hex code randomly
