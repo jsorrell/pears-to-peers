@@ -17,6 +17,7 @@ function Client(pageCallback) {
     this.leaderId = "";
     this.fileUploadProgress = 0;
     this.state = "";
+    this.roundWinner = "";
 
     this.onopen = function(evt) {
         console.log("WebSocket open");
@@ -128,19 +129,25 @@ Client.prototype.onmessage = function(rawMsg){
             console.log("the topic is " + this.topic);
             this.pageCallback(eventType);
             break;
-            
+
         case "leaderChosen":
              this.isLeader = (msg.get("leader") === this.myID);
              this.leaderId = msg.get("leader");
              this.pageCallback(eventType);
              break;
-             
+
         case "stopGame":
             this.scores = {};
             this.submissions = {};
             this.topic = "";
             this.isLeader = false;
             this.leaderId = "";
+            this.pageCallback(eventType);
+            break;
+
+        case "winnerChosen":
+            console.log("winnerChosen");
+            this.roundWinner = msg.get("winner");
             this.pageCallback(eventType);
             break;
 

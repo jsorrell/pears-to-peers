@@ -98,7 +98,8 @@ Your browser does not support the audio element.\
 function gamePageCb(eventName) {
     switch (eventName) {
         case "winnerChosen":
-            $("#submission-list").html("");
+            console.log("emptying view area");
+            $('#submission-view-area').empty();
             break;
         case "roomList":
             if (client.currentRoomId == null) {
