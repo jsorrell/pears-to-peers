@@ -118,7 +118,24 @@ function gamePageCb(eventName) {
             break;
 
         case "chooseWinner":
-
+            var submissionList = document.getElementById("submission-list");
+            submissionList.options.length = 0;
+            $('#winner-button').prop({disabled: true});
+            $('#view-submission-button').prop({disabled: true});
+            for (var submissionId in client.submissions) {
+                var el = document.createElement("option");
+                var submission = client.submissions[submissionId];
+                console.log(submission);
+                el.textContent = submission.data.slice(submission.data.lastIndexOf("/")+1);
+                console.log("submission3:");
+                console.log(client.submissions[submissionId]);
+                el.value = submissionId;
+                submissionList.appendChild(el);
+            }
+            if (submissionList.options.length != 0) {
+                $('#winner-button').prop({disabled: false});
+                $('#view-submission-button').prop({disabled: false});
+            }
             break;
 
         case "peerList":
